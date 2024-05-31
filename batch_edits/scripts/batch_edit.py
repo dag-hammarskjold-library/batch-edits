@@ -1,7 +1,7 @@
 
 import sys
 from argparse import ArgumentParser
-from package.module import Class # rename package, module and class
+from batch_edits.module import Class # rename package, module and class
 
 def get_args():
     parser = ArgumentParser()
