@@ -3,8 +3,8 @@ from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
 from batch_edits.scripts import batch_edit
 
 defaults = [Bib() for i in range(0, 10)]
-speeches = [Bib().set('089', 'b', 'B22') for i in range(0, 10)]
-votes = [Bib().set('089', 'b', 'B23') for i in range(0, 10)]
+speeches = [Bib().set('989', 'a', 'Speeches') for i in range(0, 10)]
+votes = [Bib().set('989', 'a', 'Voting Data') for i in range(0, 10)]
 def all_records(): return defaults + speeches + votes
 
 def test_script_runs(bibs):
@@ -65,7 +65,8 @@ def test_edit_7():
     [bib.set('069', 'a', 'dummy') for bib in all_records()]
     assert all([bib.get_value('069', 'a') for bib in all_records()])
     [batch_edit.edit_7(bib) for bib in all_records()]
-    assert not any([bib.get_value('069', 'a') for bib in all_records()])
+    assert not any([bib.get_value('069', 'a') for bib in defaults])
+    assert all([bib.get_value('069', 'a') for bib in speeches + votes])
 
 def test_edit_8():
     # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700
@@ -106,3 +107,68 @@ def test_edit_11():
     assert not any([bib.get_value('130', 'a') for bib in defaults])
     assert all([bib.get_value('730', 'a') for bib in defaults])
     assert all([bib.get_value('130', 'a') for bib in speeches + votes])
+
+def test_edit_12():
+    # 12. BIBLIOGRAPHIC - Delete field 222 - No condition
+    [bib.set('222', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('222', 'a') for bib in all_records()])
+    [batch_edit.edit_12(bib) for bib in all_records()]
+    assert not any([bib.get_value('222', 'a') for bib in defaults])
+    assert all([bib.get_value('222', 'a') for bib in speeches + votes])
+
+def test_edit_13():
+    # 13. VOTING, SPEECHES - Delete field 269 - If (089:B22 OR  089:B23) - Only speeches and votes
+    [bib.set('269', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('269', 'a') for bib in all_records()])
+    [batch_edit.edit_13(bib) for bib in speeches + votes]
+    assert not any([bib.get_value('269', 'a') for bib in speeches + votes])
+    assert all([bib.get_value('269', 'a') for bib in defaults])
+
+def test_edit_14():
+    # 14. BIBLIOGRAPHIC - Transfer field 440 - To 830
+    Auth().set('140', 'a', 'dummy').commit()
+    [bib.set('440', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('440', 'a') for bib in all_records()])
+    [batch_edit.edit_14(bib) for bib in all_records()]
+    assert not any([bib.get_value('440', 'a') for bib in defaults])
+    assert all([bib.get_value('830', 'a') == 'dummy' for bib in defaults])
+    assert all([bib.get_value('440', 'a') for bib in speeches + votes])
+
+def test_edit_15():
+    # 15. BIBLIOGRAPHIC - Transfer field 490 $x - Transfer to 022 $a if the field with the same value does not exists
+    [bib.set('490', 'x', 'dummy') for bib in all_records()]
+    [bib.set('022', 'a', 'dummy') for bib in defaults[:5]]
+    [bib.set('022', 'a', 'other') for bib in defaults[5:]]
+    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 30
+    assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'dummy']) == 5
+    [batch_edit.edit_15(bib) for bib in all_records()]
+    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 25
+    assert len([bib for bib in defaults if bib.get_value('022', 'a')]) == 10
+    assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'other']) == 5
+    assert len([bib for bib in speeches + votes if bib.get_value('022', 'a')]) == 0
+
+def test_edit_16():
+    # 16. BIBLIOGRAPHIC - Delete field 597 - If 597:"Retrospective indexing"
+    [bib.set('597', 'a', 'Retrospective indexing.') for bib in all_records()]
+    assert all([bib.get_value('597', 'a') == 'Retrospective indexing.' for bib in all_records()])
+    [batch_edit.edit_16(bib) for bib in all_records()]
+    assert not any([bib.get_value('597', 'a') == 'Retrospective indexing.' for bib in defaults])
+    assert all([bib.get_value('597', 'a') == 'Retrospective indexing.' for bib in speeches + votes])
+
+def test_edit_17():
+    # 17. BIBLIOGRAPHIC - Delete field 773 - No condition
+    [bib.set('773', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('773', 'a') for bib in all_records()])
+    [batch_edit.edit_17(bib) for bib in all_records()]
+    assert not any([bib.get_value('773', 'a') for bib in defaults])
+    assert all([bib.get_value('773', 'a') for bib in speeches + votes])
+
+def test_edit_18():
+    # 18. BIBLIOGRAPHIC - Delete field 910 - No conditions
+    [bib.set('910', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('910', 'a') for bib in all_records()])
+    [batch_edit.edit_18(bib) for bib in all_records()]
+    assert not any([bib.get_value('910', 'a') for bib in defaults])
+    assert all([bib.get_value('910', 'a') for bib in speeches + votes])
+
+    
