@@ -1,9 +1,10 @@
+"""Run a series of specified edits on a set of DLX records"""
 
-import sys, os, re, json
+import sys, os, re, json, inspect
 from argparse import ArgumentParser
 from batch_edits.module import Class # rename package, module and class
 from dlx import DB
-from dlx.marc import BibSet, AuthSet
+from dlx.marc import BibSet
 
 def get_args():
     parser = ArgumentParser()
@@ -23,13 +24,14 @@ def run(**kwargs):
         args = get_args()
         DB.connect(args.connect)
 
-    edits = [edit_1, edit_2, edit_3, edit_4]
+    bibs = BibSet.from_query({}, sort=[('_id', 1)], limit=1000)
+    edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
 
-    for bib in BibSet.from_query({}, sort=[('_id', 1)], limit=1000):
-        for edit in edits:
-            bib = edit(bib)
-
+    for bib in bibs:
+        [bib := edit(bib) for edit in edits]
         bib.commit(user='batch edit 1')
+
+###
 
 def edit_1(bib):
     # 1. BIBLIOGRAPHIC - Delete field 099 - IF subfield c is empty OR if subfield c = internet
@@ -171,10 +173,35 @@ def edit_18(bib):
 
     return bib
 
+def edit_19(bib):
     # 19. BIBLIOGRAPHIC - Delete field 920 - No condition
-    # 20. BIBLIOGRAPHIC - Delete field 949 - TO COMPLETE AFTER DECISION
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        bib.delete_field('920')
+
+    return bib
+
+#def edit_20(bib):
+#    # 20. BIBLIOGRAPHIC - Delete field 949 - TO COMPLETE AFTER DECISION
+#    bib.delete_field('949')
+
+def edit_21(bib):
+    if bib is None:
+        raise Exception('wtf')
+    
     # 21. BIBLIOGRAPHIC - Delete field 955 - No condition
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        bib.delete_field('955')
+
+    return bib
+
+def edit_22(bib):
     # 22. BIBLIOGRAPHIC - Delete field 995 - No condition
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        bib.delete_field('995')
+
+    return bib
+
+def edit_23_42(bib):
     # 23. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 022 - No condition
     # 24. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 041 - No conditions
     # 25. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 239 - No conditions
@@ -195,9 +222,37 @@ def edit_18(bib):
     # 40. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 767 - No conditions
     # 41. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 780 - No conditions
     # 42. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 830 - No conditions
+    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '767', '780', '830')
+    
+    for tag in tags:
+        for field in bib.get_fields(tag):
+            field.ind1, field.ind2 =  ' ', ' '
+
+    return bib
+
+def edit_43(bib):
     # 43. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete subfield 040 $b - No conditions
+    for field in bib.get_fields('040'):
+        field.subfields = [x for x in field.subfields if x.code != 'b']
+
+    return bib
+
+def edit_44(bib):
     # 44. BIBLIOGRAPHIC - Delete subfield 079 $q - No condition
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for field in bib.get_fields('079'):
+            field.subfields = [x for x in field.subfields if x.code != 'q']
+
+    return bib
+
+def edit_45(bib):
     # 45. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete subfield 089 $a - IF 089__a IS NOT "veto"
+    for field in bib.get_fields('089'):
+        field.subfields = [x for x in field.subfields if not (x.code == 'a' and x.value.lower() != 'veto')]
+
+    return bib
+
+def edit_46_53(bib):
     # 46. BIBLIOGRAPHIC - Delete subfield 099 $q - No condition
     # 47. BIBLIOGRAPHIC - Delete subfield 191 $f - No condition
     # 48. BIBLIOGRAPHIC - Delete subfield 250 $b - No condition
@@ -206,5 +261,24 @@ def edit_18(bib):
     # 51. BIBLIOGRAPHIC - Delete subfield 611 $2 - No condition
     # 52. BIBLIOGRAPHIC - Delete subfield 630 $2 - No condition
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
+    pairs = [('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for tag, code in pairs:
+            for field in bib.get_fields(tag):
+                field.subfields = [x for x in field.subfields if x.code != code]
+
+    return bib
+
+def edit_54(bib):
     # 54. BIBLIOGRAPHIC, SPEECHES - Delete subfield 710 $9 - No conditions
-    #bib.commit()
+    if not any([x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for field in bib.get_fields('710'):
+            field.subfields = [x for x in field.subfields if x.code != '9']
+    
+    return bib
+
+###
+
+if __name__ == '__main__':
+    run()
