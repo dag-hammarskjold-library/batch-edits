@@ -8,8 +8,11 @@ votes = [Bib().set('989', 'a', 'Voting Data') for i in range(0, 10)]
 def all_records(): return defaults + speeches + votes
 
 def test_script_runs(bibs):
-    batch_edit.run(connect='mongomock://localhost')
-
+    batch_edit.run(connect='mongomock://localhost', output='db', skip_confirm=True, limit=30)
+    bibs = BibSet.from_query({})
+    assert bibs.count == 30
+    assert all([bib.user == 'batch edit 1' for bib in bibs])
+    
 def test_edit_1():
     # 1. BIBLIOGRAPHIC - Delete field 099 if subfield c = internet
     [bib.set('099', 'c', 'internet') for bib in all_records()]
@@ -25,14 +28,15 @@ def test_edit_2():
     assert len([bib for bib in defaults if bib.get_value('029', 'a') == 'to delete']) == 5
     [batch_edit.edit_2(bib) for bib in all_records()]
     assert len([bib for bib in defaults if bib.get_value('029', 'a') == 'to delete']) == 0
+    assert len([bib for bib in defaults if bib.get_value('029', 'a') in ('JN', 'UN')]) == 5
     assert all([bib.get_value('029', 'a') == 'other' for bib in speeches + votes])
 
 def test_edit_3():
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     # ?subfield $a?
     values = ['UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
-    [bib.set('930', 'a', random.choice(values)) for bib in all_records()[:20]]
-    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]
+    [bib.set('930', 'a', random.choice(values)) for bib in all_records()[:20]]                  # 20 records have fields to keep
+    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                # 10 records have fields to delete     
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 10
     [batch_edit.edit_3(bib) for bib in all_records()]
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 0
@@ -275,3 +279,21 @@ def test_edit_54():
     [batch_edit.edit_54(bib) for bib in all_records()]
     assert not any([bib.get_value('710', '9') for bib in defaults + speeches])
     assert all([bib.get_value('710', '9') for bib in votes])
+
+### abstracted functions
+
+@pytest.mark.skip(reason='Not implemented yet')
+def test_delete_field():
+    pass
+
+@pytest.mark.skip(reason='Not implemented yet')
+def test_change_tag():
+    pass
+
+@pytest.mark.skip(reason='Not implemented yet')
+def test_delete_indicators():
+    pass
+
+@pytest.mark.skip(reason='Not implemented yet')
+def test_delete_subfield():
+    pass
