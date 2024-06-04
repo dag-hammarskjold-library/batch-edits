@@ -11,7 +11,8 @@ def test_script_runs(bibs):
     batch_edit.run(connect='mongomock://localhost', output='db', skip_confirm=True, limit=30)
     bibs = BibSet.from_query({})
     assert bibs.count == 30
-    assert all([bib.user == 'batch edit 1' for bib in bibs])
+    # records have no data, no edits made
+    assert all([bib.user != 'batch edit 1' for bib in bibs])
     
 def test_edit_1():
     # 1. BIBLIOGRAPHIC - Delete field 099 if subfield c = internet

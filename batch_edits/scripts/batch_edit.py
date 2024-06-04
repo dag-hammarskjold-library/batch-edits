@@ -49,8 +49,11 @@ def run(**kwargs):
     
     bibs = BibSet.from_query(query, limit=args.limit)
     edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
+    i, status = 0, ''
 
     for bib in bibs:
+        i += 1
+
         for field in bib.datafields:
             if field.ind1 == '_':
                 field.set(None, None, ind1=' ')
@@ -62,16 +65,18 @@ def run(**kwargs):
 
         for edit in edits:
             bib = edit(bib)
-
-        if args.output == 'mrk':
-            OUT.write(bib.to_mrk() + '\n')
-        elif args.output == 'db':
-            if args.skip_confirm:
-                bib.commit(user='batch edit 1')
-            else:
-                if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
+            
+        if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
+            if args.output == 'mrk':
+                OUT.write(bib.to_mrk() + '\n')
+            elif args.output == 'db':
+                if args.skip_confirm:
+                    bib.commit(user='batch edit 1')
+                    status = ('\b' * len(status)) + f'Records updated: {i}'
+                    print(status, end='', flush=True)
+                else:
                     x = input(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n{bib.to_mrk()}\nCommit changes? (y/n): ')
-                
+
                     if x.lower() != 'y':
                         print('Changes disregarded\n')
                         time.sleep(1)
@@ -80,8 +85,8 @@ def run(**kwargs):
                     bib.commit(user='batch edit 1')
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
-                else:
-                    print(f'--> record id {bib.id}: No changes')
+        else:
+            print(f'--> record id {bib.id}: No changes')
 
 ###
 

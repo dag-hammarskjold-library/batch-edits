@@ -11,15 +11,15 @@ def bibs():
     
     for _ in range(0, 10):
         bib = Bib()
-        bib.set('089', 'b', 'A01')
+        bib.set('989', 'b', 'Default')
         bib.commit()
 
     for _ in range(0, 10):
         bib = Bib()
-        bib.set('089', 'b', 'B22')
+        bib.set('989', 'b', 'Speeches')
         bib.commit()
 
     for _ in range(0, 10):
         bib = Bib()
-        bib.set('089', 'b', 'B23')
+        bib.set('989', 'b', 'Voting Data')
         bib.commit()
