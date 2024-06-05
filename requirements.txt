@@ -1,1 +1,2 @@
+dlx @ git+https://github.com/dag-hammarskjold-library/dlx@v1.4.3.1
 pytest==8.2.0
