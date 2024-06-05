@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
-NAME = 'package'
+NAME = 'batch-edits-1'
 DESCRIPTION = ''
-VERSION = '0.0'
+VERSION = '1.0.0'
 
 with open("README.md") as f:
     long_description = f.read()
@@ -27,7 +27,7 @@ setup(
     entry_points = {
         # see https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
         'console_scripts': [
-            'run-script=package.scripts.script:run' # rename the command and the path to the function
+            'batch-edit=batch_edits.scripts.batch_edit:run'
         ]
     }
 )
