@@ -14,7 +14,7 @@ def get_args():
     parser.add_argument('--database', help='The database name')
     parser.add_argument('--query', help='JSON MDB query document')
     parser.add_argument('--querystring', help='DLX query string')
-    parser.add_argument('--limit', type=int, help='limit the number of records processed')
+    parser.add_argument('--limit', type=int, default=0, help='limit the number of records processed')
     parser.add_argument('--output', required=True, choices=['db', 'mrk'], help='')
     parser.add_argument('--output_file', help='File to write output to if output is mrk')
     parser.add_argument('--skip_confirm', action='store_true', help='')
