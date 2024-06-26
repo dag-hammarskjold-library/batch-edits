@@ -12,14 +12,14 @@ def bibs():
     for _ in range(0, 10):
         bib = Bib()
         bib.set('989', 'b', 'Default')
-        bib.commit()
+        bib.commit(user='testing')
 
     for _ in range(0, 10):
         bib = Bib()
         bib.set('989', 'b', 'Speeches')
-        bib.commit()
+        bib.commit(user='testing')
 
     for _ in range(0, 10):
         bib = Bib()
         bib.set('989', 'b', 'Voting Data')
-        bib.commit()
+        bib.commit(user='testing')
