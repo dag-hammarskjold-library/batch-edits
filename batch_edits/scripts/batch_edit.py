@@ -15,10 +15,11 @@ def get_args():
     parser.add_argument('--database', help='The database name')
     parser.add_argument('--query', help='JSON MDB query document')
     parser.add_argument('--querystring', help='DLX query string')
-    parser.add_argument('--limit', type=int, help='limit the number of records processed')
+    parser.add_argument('--limit', type=int, default=0, help='limit the number of records processed')
     parser.add_argument('--output', required=True, choices=['db', 'mrk'], help='')
     parser.add_argument('--output_file', help='File to write output to if output is mrk')
     parser.add_argument('--skip_confirm', action='store_true', help='')
+    parser.add_argument('--view_changes', action='store_true', help='')
 
     return parser.parse_args()
 
@@ -27,10 +28,7 @@ def run(**kwargs):
         sys.argv = [sys.argv[0]]
         
         for param, arg in kwargs.items():
-            if isinstance(arg, bool):
-                sys.argv.append(f'--{param}')
-            else:
-                sys.argv.append(f'--{param}={arg}')
+            sys.argv.append(f'--{param}' if isinstance(arg, bool) else f'--{param}={arg}')
 
     args = get_args()
 
@@ -47,7 +45,6 @@ def run(**kwargs):
             OUT = sys.stdout
 
     query = Query.from_string(args.querystring) if args.querystring else {}
-    
     bibs = BibSet.from_query(query, limit=args.limit)
     edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
     i, status = 0, ''
@@ -68,6 +65,9 @@ def run(**kwargs):
             bib = edit(bib)
             
         if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
+            if args.view_changes:
+                OUT.write(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n')
+
             if args.output == 'mrk':
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
@@ -76,7 +76,7 @@ def run(**kwargs):
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
                 else:
-                    x = input(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n{bib.to_mrk()}\nCommit changes? (y/n): ')
+                    x = input(f'{bib.to_mrk()}\nCommit changes? (y/n): ')
 
                     if x.lower() != 'y':
                         print('Changes disregarded\n')
