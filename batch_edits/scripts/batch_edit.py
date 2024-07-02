@@ -6,6 +6,7 @@ from batch_edits.module import Class # rename package, module and class
 from dlx import DB
 from dlx.marc import BibSet, Diff, Query, Condition
 
+USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
 
 def get_args():
@@ -71,7 +72,7 @@ def run(**kwargs):
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
                 if args.skip_confirm:
-                    bib.commit(user='batch edit 1')
+                    bib.commit(user=USER)
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
                 else:
@@ -82,7 +83,7 @@ def run(**kwargs):
                         time.sleep(1)
                         continue
 
-                    bib.commit(user='batch_edit_1')
+                    bib.commit(user=USER)
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
         else:
