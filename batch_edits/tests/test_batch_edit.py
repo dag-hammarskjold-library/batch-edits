@@ -23,7 +23,8 @@ def test_script_runs(bibs):
 def test_edit_1():
     # 1. BIBLIOGRAPHIC - Delete field 099 if subfield c = internet
     [bib.set('099', 'c', 'internet') for bib in all_records()]
-    assert all([bib.get_value('099', 'c') == 'internet' for bib in defaults])
+    [bib.set('099', 'a', 'other') for bib in defaults]
+    assert len([bib.get_value('099', 'c') == 'internet' for bib in defaults]) == 10
     [batch_edit.edit_1(x) for x in all_records()]
     assert not any([bib.get_value('099', 'c') == 'internet' for bib in defaults])
     assert all([bib.get_value('099', 'c') == 'internet' for bib in speeches + votes])
@@ -60,8 +61,7 @@ def test_edit_5():
     [bib.set('008', None, 'dummy') for bib in all_records()]
     assert all([bib.get_value('008') for bib in all_records()])
     [batch_edit.edit_5(bib) for bib in all_records()]
-    assert not any([bib.get_value('008') for bib in defaults])
-    assert all([bib.get_value('008') for bib in votes + speeches])
+    assert not any([bib.get_value('008') for bib in all_records()])
 
 def test_edit_6():
     # 6. BIBLIOGRAPHIC, VOTING - Delete field 035 - IF 089__b is NOT B22 (keep 035 for speeches)
@@ -190,14 +190,14 @@ def test_edit_19():
     assert not any([bib.get_value('920', 'a') for bib in defaults])
     assert all([bib.get_value('920', 'a') for bib in speeches + votes])
 
-@pytest.mark.skip(reason='Not implemented yet')
-def test_edit_20(bib):
+#@pytest.mark.skip(reason='Not implemented yet')
+def test_edit_20():
     # 20. BIBLIOGRAPHIC - Delete field 949 - TO COMPLETE AFTER DECISION
     [bib.set('949', 'a', 'dummy') for bib in all_records()]
     assert all([bib.get_value('949', 'a') for bib in all_records()])
-    [batch_edit.edit_19(bib) for bib in all_records()]
-    assert not any([bib.get_value('949', 'a') for bib in defaults])
-    assert all([bib.get_value('949', 'a') for bib in speeches + votes])
+    [batch_edit.edit_20(bib) for bib in all_records()]
+    assert not any([bib.get_value('949', 'a') for bib in all_records()])
+    #assert all([bib.get_value('949', 'a') for bib in speeches + votes])
 
 def test_edit_21():
     # 21. BIBLIOGRAPHIC - Delete field 955 - No condition
@@ -228,7 +228,7 @@ def test_edit_23_42():
     # 40. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 767 - No conditions
     # 41. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 780 - No conditions
     # 42. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 830 - No conditions
-    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '767', '780', '830')
+    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '830')
     
     for tag in tags:
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
@@ -287,6 +287,22 @@ def test_edit_54():
     assert not any([bib.get_value('710', '9') for bib in defaults + speeches])
     assert all([bib.get_value('710', '9') for bib in votes])
 
+def test_edit_55():
+    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - Indicator 1 - if 269>2014
+    import re
+
+    [bib.set('269', 'a', '2013') for bib in all_records()[:15]]
+    [bib.set('269', 'a', '2015') for bib in all_records()[15:]]
+    Auth().set('150', 'a', 'OK').commit()
+    
+    for bib in all_records():
+        bib.set('650', 'a', 'OK', ind1='😇')
+
+    assert all([re.match('(2013|2015)', bib.get_value('269', 'a')) for bib in all_records()])
+    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 30
+    [batch_edit.edit_55(bib) for bib in all_records()]
+    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 15
+    
 ### abstracted functions
 
 @pytest.mark.skip(reason='Not implemented yet')

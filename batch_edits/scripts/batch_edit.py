@@ -96,6 +96,7 @@ def edit_1(bib):
     # 1. BIBLIOGRAPHIC - Delete field 099 - IF subfield c is empty OR if subfield c = internet
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         [bib.delete_field(field) for field in bib.get_fields('099') if field.get_value('c') == 'internet']
+        [bib.delete_field(field) for field in bib.get_fields('099') if field.get_value('c') is None]
 
     return bib
 
@@ -125,8 +126,9 @@ def edit_4(bib):
 # delete_field
 def edit_5(bib):
     # 5. BIBLIOGRAPHIC - Delete field 008 - No condition
-    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('008')
+    # update: delete for all record types
+    
+    bib.delete_field('008')
 
     return bib
 
@@ -255,10 +257,12 @@ def edit_19(bib):
     return bib
 
 # delete_field
-'''def edit_20(bib):
+def edit_20(bib):
     # 20. BIBLIOGRAPHIC - Delete field 949 - TO COMPLETE AFTER DECISION
+    # update: go ahead
     bib.delete_field('949')
-'''
+
+    return bib
 
 # delete_field
 def edit_21(bib):
@@ -298,7 +302,8 @@ def edit_23_42(bib):
     # 40. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 767 - No conditions
     # 41. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 780 - No conditions
     # 42. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 830 - No conditions
-    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '767', '780', '830')
+    # update: add 740
+    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '830')
     
     for tag in tags:
         for field in bib.get_fields(tag):
@@ -358,6 +363,15 @@ def edit_54(bib):
         for field in bib.get_fields('710'):
             field.subfields = [x for x in field.subfields if x.code != '9']
     
+    return bib
+
+def edit_55(bib):
+    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - Indicator 1 - if 269>2014
+    for val in bib.get_values('269', 'a'):
+        if int(val[:4]) > 2014:
+            for field in bib.get_fields('650'):
+                field.ind1 = ' '
+
     return bib
 
 ### future - abstracted functions
