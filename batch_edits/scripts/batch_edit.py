@@ -66,7 +66,10 @@ def run(**kwargs):
             
         if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
             if args.view_changes:
-                OUT.write(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n')
+                if args.output == 'mrk':
+                    OUT.write(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n')
+                else:
+                    print(f'--> record id {bib.id}\nFields changed:\n{changes}\n\nRecord with changes:\n')
 
             if args.output == 'mrk':
                 OUT.write(bib.to_mrk() + '\n')
