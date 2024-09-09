@@ -5,7 +5,7 @@ A series of hardcoded updates to the DLX data as specified by IAMU
 Install into a Python virutal environment with `pip`: 
 
 ```bash
-pip install git+https://github.com/dag-hammarskjold-library/batch-edits-1@v1.0.0
+pip install git+https://github.com/dag-hammarskjold-library/batch-edits-1@v1.0.2
 ```
 
 This installs the `batch-edit` command into the current virtual environment.
