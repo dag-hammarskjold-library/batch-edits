@@ -44,7 +44,7 @@ def run(**kwargs):
         else:
             OUT = sys.stdout
 
-    query = Query.from_string(args.querystring) if args.querystring else {}
+    query = Query.from_string(args.querystring) if args.querystring else json.loads(args.query) if args.query else {}
     bibs = BibSet.from_query(query, limit=args.limit)
     edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
     i, status = 0, ''
