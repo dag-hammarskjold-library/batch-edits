@@ -153,37 +153,17 @@ def edit_7(bib):
 
 # change_tag
 def edit_8(bib):
-    # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700
+    # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700 - Clean indicators before transfer
+    # 9. BIBLIOGRAPHIC - Transfer field 110 - to 710 - Clean indicators before transfer
+    # 10. BIBLIOGRAPHIC - Transfer field 111 - to 711 - Clean indicators before transfer
+    # 11. BIBLIOGRAPHIC - Transfer field 130 - to 730 - Clean indicators before transfer
+    # 14. BIBLIOGRAPHIC - Transfer field 440 - To 830 - Clean indicators before transfer
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        for field in bib.get_fields('100'):
-            field.tag = '700'
+        for from_tag, to_tag in [('100', '700'), ('110', '710'), ('111', '711'), ('130', '730'), ('440', '830')]:
+            for field in bib.get_fields(from_tag):
+                field.ind1, field.ind1 = None, None
 
-    return bib
-
-# change_tag
-def edit_9(bib):
-    # 9. BIBLIOGRAPHIC - Transfer field 110 - to 710
-    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        for field in bib.get_fields('110'):
-            field.tag = '710'
-
-    return bib
-
-# change_tag
-def edit_10(bib):
-    # 10. BIBLIOGRAPHIC - Transfer field 111 - to 711
-    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        for field in bib.get_fields('111'):
-            field.tag = '711'
-
-    return bib
-
-# change_tag
-def edit_11(bib):
-    # 11. BIBLIOGRAPHIC - Transfer field 130 - to 730
-    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        for field in bib.get_fields('130'):
-            field.tag = '730'
+            bib = change_tag(bib, from_tag, to_tag)
 
     return bib
 
@@ -200,15 +180,6 @@ def edit_13(bib):
     # 13. VOTING, SPEECHES - Delete field 269 - If (089:B22 OR  089:B23) - Only speeches and votes
     if any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         bib.delete_field('269')
-
-    return bib
-
-# change_tag
-def edit_14(bib):
-    # 14. BIBLIOGRAPHIC - Transfer field 440 - To 830
-    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        for field in bib.get_fields('440'):
-            field.tag = '830'
 
     return bib
 
@@ -379,6 +350,9 @@ def edit_55(bib):
 
 ### future - abstracted functions
 
+def change_value():
+    pass
+
 def delete_field(record, tag, conditions=[]):
     if conditions:
         assert all([isinstance(c, Condition) for c in conditions])
@@ -394,16 +368,18 @@ def delete_field(record, tag, conditions=[]):
     return record
 
 def change_tag(record, from_tag, to_tag, conditions=[]):
-    if conditions:
-        assert all([isinstance(c, Condition) for c in conditions])
+        assert all([isinstance(c, Condition) for c in conditions]) if conditions else True
 
         for field in record.get_fields(from_tag):
-            for subfields in [x.subfields for x in conditions]:
-                for code, val in subfields:
-                    if val in field.get_values(code):
-                        field.tag = to_tag
-    
-    return record
+            if conditions:
+                for subfields in [x.subfields for x in conditions]:
+                    for code, val in subfields:
+                        if val in field.get_values(code):
+                            field.tag = to_tag
+            else:
+                field.tag = to_tag
+
+        return record
 
 def delete_indicators(record, tag, conditions=[]):
     if conditions:
@@ -428,6 +404,12 @@ def delete_subfield(record, tag, subfield_code, conditions=[]):
                         field.subfields = [x for x in field.subfields if code != subfield_code]
 
     return record
+
+def delete_indicators():
+    pass
+
+def change_indicators():
+    pass
 
 ###
 

@@ -1,6 +1,9 @@
 import sys, pytest, random
+from dlx import DB
 from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
 from batch_edits.scripts import batch_edit
+
+DB.connect('mongomock://localhost')
 
 defaults = [Bib() for i in range(0, 10)]
 speeches = [Bib().set('989', 'a', 'Speeches') for i in range(0, 10)]
@@ -83,10 +86,13 @@ def test_edit_8():
     # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700
     Auth().set('100', 'a', 'dummy').commit()
     [bib.set('100', 'a', 'dummy') for bib in all_records()]
+    [setattr(bib.get_field('100'), 'ind1', 9) for bib in all_records()]
     assert all([bib.get_value('100', 'a') for bib in all_records()])
+    assert all([bib.get_field('100').ind1 for bib in defaults])
     [batch_edit.edit_8(bib) for bib in all_records()]
     assert not any([bib.get_value('100', 'a') for bib in defaults])
     assert all([bib.get_value('700', 'a') for bib in defaults])
+    assert not any([bib.get_field('700').ind1 for bib in defaults])
     assert all([bib.get_value('100', 'a') for bib in speeches + votes])
 
 def test_edit_9():
