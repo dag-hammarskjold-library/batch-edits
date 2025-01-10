@@ -152,7 +152,7 @@ def edit_7(bib):
     return bib
 
 # change_tag
-def edit_8(bib):
+def edit_8_9_10_11_14(bib):
     # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700 - Clean indicators before transfer
     # 9. BIBLIOGRAPHIC - Transfer field 110 - to 710 - Clean indicators before transfer
     # 10. BIBLIOGRAPHIC - Transfer field 111 - to 711 - Clean indicators before transfer
