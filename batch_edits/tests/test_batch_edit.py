@@ -73,10 +73,13 @@ def test_edit_6():
 
 def test_edit_7():
     # 7. BIBLIOGRAPHIC - Delete field 069 - No condition
-    [bib.set('069', 'a', 'dummy') for bib in all_records()]
+    [bib.set('069', 'a', 'dummy').set('069', 'b', 'dummy2', address=['+']) for bib in all_records()]
+    print('\n'.join([x.to_mrk() for x in all_records()]))
     assert all([bib.get_value('069', 'a') for bib in all_records()])
+    assert all([bib.get_values('069', 'b') for bib in all_records()])
     [batch_edit.edit_7(bib) for bib in all_records()]
     assert not any([bib.get_value('069', 'a') for bib in defaults])
+    assert not any([bib.get_value('069', 'b') for bib in defaults])
     assert all([bib.get_value('069', 'a') for bib in speeches + votes])
 
 def test_edit_8():
