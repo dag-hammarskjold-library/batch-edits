@@ -344,7 +344,6 @@ def edit_45(bib):
 def edit_46_53(bib):
     # 46. BIBLIOGRAPHIC - Delete subfield 099 $q - No condition
     # 47. BIBLIOGRAPHIC - Delete subfield 191 $f - No condition
-    # 48. BIBLIOGRAPHIC - Delete subfield 250 $b - No condition
     # 49. BIBLIOGRAPHIC - Delete subfield 600 $2 - No condition
     # 50. BIBLIOGRAPHIC - Delete subfield 610 $2 - No condition
     # 51. BIBLIOGRAPHIC - Delete subfield 611 $2 - No condition
@@ -356,6 +355,20 @@ def edit_46_53(bib):
         for tag, code in pairs:
             for field in bib.get_fields(tag):
                 field.subfields = [x for x in field.subfields if x.code != code]
+
+    return bib
+
+# no function
+def edit_48(bib):
+    # 48. BIBLIOGRAPHIC - Delete subfield 250 $b - No condition
+    # need to strip the = at the end of subfield $a
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for field in bib.get_fields('250'):
+            if field.get_subfield('b'):
+                field.subfields = [x for x in field.subfields if x.code != 'b']
+
+                if field.get_subfield('a').value[-1] == '=':
+                    field.get_subfield('a').value = field.get_subfield('a').value[:-1]
 
     return bib
 
