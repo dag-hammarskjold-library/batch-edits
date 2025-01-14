@@ -45,7 +45,7 @@ def test_edit_2():
 def test_edit_3():
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     # ?subfield $a?
-    values = ['UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
+    values = ['UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
     [bib.set('930', 'a', random.choice(values)) for bib in all_records()[:20]]                  # 20 records have fields to keep
     [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                # 10 records have fields to delete     
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 10
