@@ -210,7 +210,12 @@ def edit_16(bib):
 # delete_field
 def edit_17(bib):
     # 17. BIBLIOGRAPHIC - Delete field 773 - No condition
+    # amendment: move to 580
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for field in bib.get_fields('773'):
+            field.ind1, field.ind2 = ' ', ' '
+            field.tag = '580'
+
         bib.delete_fields('773')
 
     return bib

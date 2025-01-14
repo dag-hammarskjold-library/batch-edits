@@ -145,6 +145,7 @@ def test_edit_17():
     assert all([bib.get_value('773', 'a') for bib in all_records()])
     [batch_edit.edit_17(bib) for bib in all_records()]
     assert not any([bib.get_value('773', 'a') for bib in defaults])
+    assert all(['dummy' in bib.get_values('580', 'a') for bib in defaults])
     assert all([bib.get_value('773', 'a') for bib in speeches + votes])
 
 def test_edit_18():
