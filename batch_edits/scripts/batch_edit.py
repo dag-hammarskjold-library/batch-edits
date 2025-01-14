@@ -118,7 +118,7 @@ def edit_3(bib):
         if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER')]):
             bib.fields = [f for f in bib.fields if f != field] # todo: fix dlx.Marc.delete_field with field as arg
 
-    return bib
+    return bib  
 
 # delete_field        
 def edit_4(bib):
@@ -362,6 +362,14 @@ def edit_55(bib):
         if int(val[:4]) > 2014:
             for field in bib.get_fields('650'):
                 field.ind1 = ' '
+
+    return bib
+
+# delete field
+def edit_56(bib):
+    # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        bib.delete_fields('529')
 
     return bib
 
