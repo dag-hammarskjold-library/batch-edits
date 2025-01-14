@@ -161,7 +161,7 @@ def edit_8_9_10_11_14(bib):
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for from_tag, to_tag in [('100', '700'), ('110', '710'), ('111', '711'), ('130', '730'), ('440', '830')]:
             for field in bib.get_fields(from_tag):
-                field.ind1, field.ind1 = None, None
+                field.ind1, field.ind1 = ' ', ' '
 
             bib = change_tag(bib, from_tag, to_tag)
 
@@ -192,7 +192,8 @@ def edit_15(bib):
 
             if val not in bib.get_values('022', 'a'):
                 bib.set('022', 'a', val, address='+')
-                bib.delete_field(field)
+            
+            field.subfields = [s for s in field.subfields if s.code != 'x']
 
     return bib
 
