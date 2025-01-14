@@ -322,7 +322,8 @@ def edit_46_53(bib):
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
     # 53.1 BIBLIOGRAPHIC - Delete subfield 041 $b - No condition
     # 53.2 BIBLIOGRAPHIC - Delete subfield 520 $b - No condition
-    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('520', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+    # 53.3 BIBLIOGRAPHIC - Delete subfield 520 $9 - No condition
+    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('520', 'b'), ('520', '9'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
 
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for tag, code in pairs:
