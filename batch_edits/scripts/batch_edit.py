@@ -98,8 +98,8 @@ def run(**kwargs):
 def edit_1(bib):
     # 1. BIBLIOGRAPHIC - Delete field 099 - IF subfield c is empty OR if subfield c = internet
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        [bib.delete_field(field) for field in bib.get_fields('099') if field.get_value('c') == 'internet']
-        [bib.delete_field(field) for field in bib.get_fields('099') if field.get_value('c') is None]
+        [bib.delete_field(field) for field in bib.get_fields('099') if field.get_value('c').lower() == 'internet']
+        [bib.delete_field(field) for field in bib.get_fields('099') if not field.get_value('c')]
 
     return bib
 
