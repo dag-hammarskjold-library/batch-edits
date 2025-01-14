@@ -1,6 +1,9 @@
 import sys, pytest, random
+from dlx import DB
 from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
 from batch_edits.scripts import batch_edit
+
+DB.connect('mongomock://localhost')
 
 defaults = [Bib() for i in range(0, 10)]
 speeches = [Bib().set('989', 'a', 'Speeches') for i in range(0, 10)]
@@ -73,51 +76,31 @@ def test_edit_6():
 
 def test_edit_7():
     # 7. BIBLIOGRAPHIC - Delete field 069 - No condition
-    [bib.set('069', 'a', 'dummy') for bib in all_records()]
+    [bib.set('069', 'a', 'dummy').set('069', 'b', 'dummy2', address=['+']) for bib in all_records()]
+    print('\n'.join([x.to_mrk() for x in all_records()]))
     assert all([bib.get_value('069', 'a') for bib in all_records()])
+    assert all([bib.get_values('069', 'b') for bib in all_records()])
     [batch_edit.edit_7(bib) for bib in all_records()]
     assert not any([bib.get_value('069', 'a') for bib in defaults])
+    assert not any([bib.get_value('069', 'b') for bib in defaults])
     assert all([bib.get_value('069', 'a') for bib in speeches + votes])
 
-def test_edit_8():
-    # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700
+def test_edit_8_9_10_11_14():
+    # 8. BIBLIOGRAPHIC - Transfer field 100 - to 700 - Clean indicators before transfer
+    # 9. BIBLIOGRAPHIC - Transfer field 110 - to 710 - Clean indicators before transfer
+    # 10. BIBLIOGRAPHIC - Transfer field 111 - to 711 - Clean indicators before transfer
+    # 11. BIBLIOGRAPHIC - Transfer field 130 - to 730 - Clean indicators before transfer
+    # 14. BIBLIOGRAPHIC - Transfer field 440 - To 830 - Clean indicators before transfer
     Auth().set('100', 'a', 'dummy').commit()
     [bib.set('100', 'a', 'dummy') for bib in all_records()]
+    [setattr(bib.get_field('100'), 'ind1', 9) for bib in all_records()]
     assert all([bib.get_value('100', 'a') for bib in all_records()])
-    [batch_edit.edit_8(bib) for bib in all_records()]
+    assert all([bib.get_field('100').ind1 for bib in defaults])
+    [batch_edit.edit_8_9_10_11_14(bib) for bib in all_records()]
     assert not any([bib.get_value('100', 'a') for bib in defaults])
     assert all([bib.get_value('700', 'a') for bib in defaults])
+    assert not any([bib.get_field('700').ind1 for bib in defaults])
     assert all([bib.get_value('100', 'a') for bib in speeches + votes])
-
-def test_edit_9():
-    # 9. BIBLIOGRAPHIC - Transfer field 110 - to 710
-    Auth().set('110', 'a', 'dummy').commit()
-    [bib.set('110', 'a', 'dummy') for bib in all_records()]
-    assert all([bib.get_value('110', 'a') for bib in all_records()])
-    [batch_edit.edit_9(bib) for bib in all_records()]
-    assert not any([bib.get_value('110', 'a') for bib in defaults])
-    assert all([bib.get_value('710', 'a') for bib in defaults])
-    assert all([bib.get_value('110', 'a') for bib in speeches + votes])
-
-def test_edit_10():
-    # 10. BIBLIOGRAPHIC - Transfer field 111 - to 711
-    Auth().set('111', 'a', 'dummy').commit()
-    [bib.set('111', 'a', 'dummy') for bib in all_records()]
-    assert all([bib.get_value('111', 'a') for bib in all_records()])
-    [batch_edit.edit_10(bib) for bib in all_records()]
-    assert not any([bib.get_value('111', 'a') for bib in defaults])
-    assert all([bib.get_value('711', 'a') for bib in defaults])
-    assert all([bib.get_value('111', 'a') for bib in speeches + votes])
-
-def test_edit_11():
-    # 11. BIBLIOGRAPHIC - Transfer field 130 - to 730
-    Auth().set('130', 'a', 'dummy').commit()
-    [bib.set('130', 'a', 'dummy') for bib in all_records()]
-    assert all([bib.get_value('130', 'a') for bib in all_records()])
-    [batch_edit.edit_11(bib) for bib in all_records()]
-    assert not any([bib.get_value('130', 'a') for bib in defaults])
-    assert all([bib.get_value('730', 'a') for bib in defaults])
-    assert all([bib.get_value('130', 'a') for bib in speeches + votes])
 
 def test_edit_12():
     # 12. BIBLIOGRAPHIC - Delete field 222 - No condition
@@ -134,16 +117,6 @@ def test_edit_13():
     [batch_edit.edit_13(bib) for bib in speeches + votes]
     assert not any([bib.get_value('269', 'a') for bib in speeches + votes])
     assert all([bib.get_value('269', 'a') for bib in defaults])
-
-def test_edit_14():
-    # 14. BIBLIOGRAPHIC - Transfer field 440 - To 830
-    Auth().set('140', 'a', 'dummy').commit()
-    [bib.set('440', 'a', 'dummy') for bib in all_records()]
-    assert all([bib.get_value('440', 'a') for bib in all_records()])
-    [batch_edit.edit_14(bib) for bib in all_records()]
-    assert not any([bib.get_value('440', 'a') for bib in defaults])
-    assert all([bib.get_value('830', 'a') == 'dummy' for bib in defaults])
-    assert all([bib.get_value('440', 'a') for bib in speeches + votes])
 
 def test_edit_15():
     # 15. BIBLIOGRAPHIC - Transfer field 490 $x - Transfer to 022 $a if the field with the same value does not exists
@@ -272,7 +245,8 @@ def test_edit_46_53():
     # 51. BIBLIOGRAPHIC - Delete subfield 611 $2 - No condition
     # 52. BIBLIOGRAPHIC - Delete subfield 630 $2 - No condition
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
-    pairs = [('099', 'q'), ('191', 'f'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+    # 53.1 BIBLIOGRAPHIC - Delete subfield 041 $b - No condition
+    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
     [bib.set(tag, code, 'dummy') for bib in all_records() for tag, code in pairs]
     assert all([bib.get_value(tag, code) for bib in all_records() for tag, code in pairs])
     [batch_edit.edit_46_53(bib) for bib in all_records()]
