@@ -180,7 +180,7 @@ def test_edit_21():
     assert not any([bib.get_value('955', 'a') for bib in defaults])
     assert all([bib.get_value('955', 'a') for bib in speeches + votes])
 
-def test_edit_23_42():
+def test_edit_23_34_36_42():
     # 23. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 022 - No condition
     # 24. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 041 - No conditions
     # 25. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 239 - No conditions
@@ -193,7 +193,6 @@ def test_edit_23_42():
     # 32. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 610 - No conditions
     # 33. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 611 - No conditions
     # 34. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 630 - No conditions
-    # 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
     # 36. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 700 - No conditions
     # 37. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 710 - No conditions
     # 38. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 711 - No conditions
@@ -201,13 +200,13 @@ def test_edit_23_42():
     # 40. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 767 - No conditions
     # 41. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 780 - No conditions
     # 42. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 830 - No conditions
-    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '830')
+    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '700', '710', '711', '730', '740', '767', '780', '830')
     
     for tag in tags:
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
         assert all([any([field.ind1 == '9' and field.ind2 == '9' for field in bib.get_fields(tag)]) for bib in all_records()])
     
-    [batch_edit.edit_23_42(bib) for bib in all_records()]
+    [batch_edit.edit_23_34_36_42(bib) for bib in all_records()]
     
     for tag in tags:
         assert all([all([field.ind1 == ' ' and field.ind2 == ' ' for field in bib.get_fields(tag)]) for bib in all_records()])
