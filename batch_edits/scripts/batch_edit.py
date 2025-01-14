@@ -115,7 +115,7 @@ def edit_2(bib):
 def edit_3(bib):
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     for field in bib.get_fields('930'):
-        if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER')]):
+        if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER')]):
             bib.fields = [f for f in bib.fields if f != field] # todo: fix dlx.Marc.delete_field with field as arg
 
     return bib
