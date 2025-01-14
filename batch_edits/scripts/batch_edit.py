@@ -365,10 +365,10 @@ def edit_55(bib):
 # delete field
 def edit_56(bib):
     # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
-    # 21. BIBLIOGRAPHIC - Delete field 955 - No condition
-    
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         bib.delete_fields('529')
+
+    return bib
 
 ### future - abstracted functions
 

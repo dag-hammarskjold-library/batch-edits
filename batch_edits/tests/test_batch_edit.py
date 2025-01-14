@@ -285,12 +285,12 @@ def test_edit_55():
     assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 15
 
 def test_edit_56():
-    # NEW: BIBLIOGRAPHIC - Delete field 593 - No condition
-    [bib.set('593', 'a', 'dummy') for bib in all_records()]
-    assert all([bib.get_value('593', 'a') for bib in all_records()])
-    [batch_edit.edit_17(bib) for bib in all_records()]
-    assert not any([bib.get_value('593', 'a') for bib in defaults])
-    assert all([bib.get_value('593', 'a') for bib in speeches + votes])
+    # NEW: BIBLIOGRAPHIC - Delete field 529 - No condition
+    [bib.set('529', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('529', 'a') for bib in all_records()])
+    [batch_edit.edit_56(bib) for bib in all_records()]
+    assert not any([bib.get_value('529', 'a') for bib in defaults])
+    assert all([bib.get_value('529', 'a') for bib in speeches + votes])
     
 ### abstracted functions
 
