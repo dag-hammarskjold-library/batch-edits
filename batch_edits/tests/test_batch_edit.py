@@ -240,7 +240,6 @@ def test_edit_45():
 def test_edit_46_53():
     # 46. BIBLIOGRAPHIC - Delete subfield 099 $q - No condition
     # 47. BIBLIOGRAPHIC - Delete subfield 191 $f - No condition
-    # 48. BIBLIOGRAPHIC - Delete subfield 250 $b - No condition
     # 49. BIBLIOGRAPHIC - Delete subfield 600 $2 - No condition
     # 50. BIBLIOGRAPHIC - Delete subfield 610 $2 - No condition
     # 51. BIBLIOGRAPHIC - Delete subfield 611 $2 - No condition
@@ -252,6 +251,14 @@ def test_edit_46_53():
     assert all([bib.get_value(tag, code) for bib in all_records() for tag, code in pairs])
     [batch_edit.edit_46_53(bib) for bib in all_records()]
     assert not any([bib.get_value(tag, code) for bib in defaults for tag, code in pairs])
+
+def test_edit_48():
+    # 48. BIBLIOGRAPHIC - Delete subfield 250 $b - No condition
+    # need to strip the = at the end of subfield $a
+    [bib.set('250', 'a', 'dummy=').set('250', 'b', 'dummy') for bib in all_records()]
+    [batch_edit.edit_48(bib) for bib in all_records()]
+    assert not any([bib.get_value('250', 'b') for bib in defaults])
+    assert not any([bib.get_value('250', 'a')[-1] == '=' for bib in defaults])
 
 def test_edit_54():
     # 54. BIBLIOGRAPHIC, SPEECHES - Delete subfield 710 $9 - No conditions
