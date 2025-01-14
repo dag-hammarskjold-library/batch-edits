@@ -73,10 +73,13 @@ def test_edit_6():
 
 def test_edit_7():
     # 7. BIBLIOGRAPHIC - Delete field 069 - No condition
-    [bib.set('069', 'a', 'dummy') for bib in all_records()]
+    [bib.set('069', 'a', 'dummy').set('069', 'b', 'dummy2', address=['+']) for bib in all_records()]
+    print('\n'.join([x.to_mrk() for x in all_records()]))
     assert all([bib.get_value('069', 'a') for bib in all_records()])
+    assert all([bib.get_values('069', 'b') for bib in all_records()])
     [batch_edit.edit_7(bib) for bib in all_records()]
     assert not any([bib.get_value('069', 'a') for bib in defaults])
+    assert not any([bib.get_value('069', 'b') for bib in defaults])
     assert all([bib.get_value('069', 'a') for bib in speeches + votes])
 
 def test_edit_8():
@@ -273,7 +276,8 @@ def test_edit_46_53():
     # 51. BIBLIOGRAPHIC - Delete subfield 611 $2 - No condition
     # 52. BIBLIOGRAPHIC - Delete subfield 630 $2 - No condition
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
-    pairs = [('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+    # 53.1 BIBLIOGRAPHIC - Delete subfield 041 $b - No condition
+    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
     [bib.set(tag, code, 'dummy') for bib in all_records() for tag, code in pairs]
     assert all([bib.get_value(tag, code) for bib in all_records() for tag, code in pairs])
     [batch_edit.edit_46_53(bib) for bib in all_records()]
