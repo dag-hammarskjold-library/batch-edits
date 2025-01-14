@@ -201,8 +201,12 @@ def test_edit_23_42():
     # 40. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 767 - No conditions
     # 41. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 780 - No conditions
     # 42. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 830 - No conditions
-    tags = ('022', '041', '239', '245', '246', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '830')
-    
+    # 43.1 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 740 - No conditions
+    # 43.2 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 785 - No conditions
+    # 43.3 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 362 - No conditions
+    # 43.4 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 490 - No conditions
+    tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '785', '830')
+  
     for tag in tags:
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
         assert all([any([field.ind1 == '9' and field.ind2 == '9' for field in bib.get_fields(tag)]) for bib in all_records()])
