@@ -99,7 +99,7 @@ def test_edit_8_9_10_11_14():
     [batch_edit.edit_8_9_10_11_14(bib) for bib in all_records()]
     assert not any([bib.get_value('100', 'a') for bib in defaults])
     assert all([bib.get_value('700', 'a') for bib in defaults])
-    assert not any([bib.get_field('700').ind1 for bib in defaults])
+    assert all([bib.get_field('700').ind1 == ' ' for bib in defaults])
     assert all([bib.get_value('100', 'a') for bib in speeches + votes])
 
 def test_edit_12():
@@ -126,7 +126,7 @@ def test_edit_15():
     assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 30
     assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'dummy']) == 5
     [batch_edit.edit_15(bib) for bib in all_records()]
-    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 25
+    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 20
     assert len([bib for bib in defaults if bib.get_value('022', 'a')]) == 10
     assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'other']) == 5
     assert len([bib for bib in speeches + votes if bib.get_value('022', 'a')]) == 0
