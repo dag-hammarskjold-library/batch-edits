@@ -45,7 +45,7 @@ def test_edit_2():
 def test_edit_3():
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     # ?subfield $a?
-    values = ['UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
+    values = ['UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
     [bib.set('930', 'a', random.choice(values)) for bib in all_records()[:20]]                  # 20 records have fields to keep
     [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                # 10 records have fields to delete     
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 10
@@ -99,7 +99,7 @@ def test_edit_8_9_10_11_14():
     [batch_edit.edit_8_9_10_11_14(bib) for bib in all_records()]
     assert not any([bib.get_value('100', 'a') for bib in defaults])
     assert all([bib.get_value('700', 'a') for bib in defaults])
-    assert not any([bib.get_field('700').ind1 for bib in defaults])
+    assert all([bib.get_field('700').ind1 == ' ' for bib in defaults])
     assert all([bib.get_value('100', 'a') for bib in speeches + votes])
 
 def test_edit_12():
@@ -126,7 +126,7 @@ def test_edit_15():
     assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 30
     assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'dummy']) == 5
     [batch_edit.edit_15(bib) for bib in all_records()]
-    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 25
+    assert len([bib for bib in all_records() if bib.get_value('490', 'x')]) == 20
     assert len([bib for bib in defaults if bib.get_value('022', 'a')]) == 10
     assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'other']) == 5
     assert len([bib for bib in speeches + votes if bib.get_value('022', 'a')]) == 0
@@ -145,6 +145,7 @@ def test_edit_17():
     assert all([bib.get_value('773', 'a') for bib in all_records()])
     [batch_edit.edit_17(bib) for bib in all_records()]
     assert not any([bib.get_value('773', 'a') for bib in defaults])
+    assert all(['dummy' in bib.get_values('580', 'a') for bib in defaults])
     assert all([bib.get_value('773', 'a') for bib in speeches + votes])
 
 def test_edit_18():
@@ -180,7 +181,7 @@ def test_edit_21():
     assert not any([bib.get_value('955', 'a') for bib in defaults])
     assert all([bib.get_value('955', 'a') for bib in speeches + votes])
 
-def test_edit_23_42():
+def test_edit_23_34_36_42():
     # 23. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 022 - No condition
     # 24. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 041 - No conditions
     # 25. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 239 - No conditions
@@ -193,7 +194,6 @@ def test_edit_23_42():
     # 32. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 610 - No conditions
     # 33. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 611 - No conditions
     # 34. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 630 - No conditions
-    # 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
     # 36. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 700 - No conditions
     # 37. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 710 - No conditions
     # 38. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 711 - No conditions
@@ -211,7 +211,7 @@ def test_edit_23_42():
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
         assert all([any([field.ind1 == '9' and field.ind2 == '9' for field in bib.get_fields(tag)]) for bib in all_records()])
     
-    [batch_edit.edit_23_42(bib) for bib in all_records()]
+    [batch_edit.edit_23_34_36_42(bib) for bib in all_records()]
     
     for tag in tags:
         assert all([all([field.ind1 == ' ' and field.ind2 == ' ' for field in bib.get_fields(tag)]) for bib in all_records()])
@@ -250,7 +250,8 @@ def test_edit_46_53():
     # 52. BIBLIOGRAPHIC - Delete subfield 630 $2 - No condition
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
     # 53.1 BIBLIOGRAPHIC - Delete subfield 041 $b - No condition
-    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+    # 53.2 BIBLIOGRAPHIC - Delete subfield 520 $b - No condition
+    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('520', 'b'), ('520', '9'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
     [bib.set(tag, code, 'dummy') for bib in all_records() for tag, code in pairs]
     assert all([bib.get_value(tag, code) for bib in all_records() for tag, code in pairs])
     [batch_edit.edit_46_53(bib) for bib in all_records()]
@@ -287,6 +288,14 @@ def test_edit_55():
     assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 30
     [batch_edit.edit_55(bib) for bib in all_records()]
     assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 15
+
+def test_edit_56():
+    # NEW: BIBLIOGRAPHIC - Delete field 529 - No condition
+    [bib.set('529', 'a', 'dummy') for bib in all_records()]
+    assert all([bib.get_value('529', 'a') for bib in all_records()])
+    [batch_edit.edit_56(bib) for bib in all_records()]
+    assert not any([bib.get_value('529', 'a') for bib in defaults])
+    assert all([bib.get_value('529', 'a') for bib in speeches + votes])
     
 ### abstracted functions
 

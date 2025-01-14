@@ -115,10 +115,10 @@ def edit_2(bib):
 def edit_3(bib):
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     for field in bib.get_fields('930'):
-        if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER')]):
+        if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER')]):
             bib.fields = [f for f in bib.fields if f != field] # todo: fix dlx.Marc.delete_field with field as arg
 
-    return bib
+    return bib  
 
 # delete_field        
 def edit_4(bib):
@@ -161,7 +161,7 @@ def edit_8_9_10_11_14(bib):
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for from_tag, to_tag in [('100', '700'), ('110', '710'), ('111', '711'), ('130', '730'), ('440', '830')]:
             for field in bib.get_fields(from_tag):
-                field.ind1, field.ind1 = None, None
+                field.ind1, field.ind1 = ' ', ' '
 
             bib = change_tag(bib, from_tag, to_tag)
 
@@ -192,7 +192,8 @@ def edit_15(bib):
 
             if val not in bib.get_values('022', 'a'):
                 bib.set('022', 'a', val, address='+')
-                bib.delete_field(field)
+            
+            field.subfields = [s for s in field.subfields if s.code != 'x']
 
     return bib
 
@@ -209,7 +210,12 @@ def edit_16(bib):
 # delete_field
 def edit_17(bib):
     # 17. BIBLIOGRAPHIC - Delete field 773 - No condition
+    # amendment: move to 580
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        for field in bib.get_fields('773'):
+            field.ind1, field.ind2 = ' ', ' '
+            field.tag = '580'
+
         bib.delete_fields('773')
 
     return bib
@@ -255,7 +261,7 @@ def edit_22(bib):
     return bib
 
 # delete_indicators
-def edit_23_42(bib):
+def edit_23_34_36_42(bib):
     # 23. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 022 - No condition
     # 24. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 041 - No conditions
     # 25. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 239 - No conditions
@@ -268,7 +274,6 @@ def edit_23_42(bib):
     # 32. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 610 - No conditions
     # 33. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 611 - No conditions
     # 34. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 630 - No conditions
-    # 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
     # 36. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 700 - No conditions
     # 37. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 710 - No conditions
     # 38. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 711 - No conditions
@@ -286,6 +291,13 @@ def edit_23_42(bib):
         for field in bib.get_fields(tag):
             field.ind1 = ' ' if field.ind1 not in (' ', '_') else field.ind1
             field.ind2 = ' ' if field.ind2 not in (' ', '_') else field.ind2
+
+    return bib
+
+def edit_35(bib):
+    # 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
+    for field in bib.get_fields('650'):
+        field.ind2 = ' ' if field.ind2 not in (' ', '_') else field.ind2
 
     return bib
 
@@ -324,7 +336,9 @@ def edit_46_53(bib):
     # 52. BIBLIOGRAPHIC - Delete subfield 630 $2 - No condition
     # 53. BIBLIOGRAPHIC - Delete subfield 650 $2 - No condition
     # 53.1 BIBLIOGRAPHIC - Delete subfield 041 $b - No condition
-    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
+    # 53.2 BIBLIOGRAPHIC - Delete subfield 520 $b - No condition
+    # 53.3 BIBLIOGRAPHIC - Delete subfield 520 $9 - No condition
+    pairs = [('041', 'b'), ('099', 'q'), ('191', 'f'), ('250', 'b'), ('520', 'b'), ('520', '9'), ('600', '2'), ('610', '2'), ('611', '2'), ('630', '2'), ('650', '2')]
 
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for tag, code in pairs:
@@ -362,6 +376,14 @@ def edit_55(bib):
         if int(val[:4]) > 2014:
             for field in bib.get_fields('650'):
                 field.ind1 = ' '
+
+    return bib
+
+# delete field
+def edit_56(bib):
+    # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
+    if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
+        bib.delete_fields('529')
 
     return bib
 
