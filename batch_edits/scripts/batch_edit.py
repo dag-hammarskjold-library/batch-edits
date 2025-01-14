@@ -123,7 +123,7 @@ def edit_3(bib):
 # delete_field        
 def edit_4(bib):
     # 4. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 000 - No condition
-    bib.delete_field('000')
+    bib.delete_fields('000')
     return bib
 
 # delete_field
@@ -131,7 +131,7 @@ def edit_5(bib):
     # 5. BIBLIOGRAPHIC - Delete field 008 - No condition
     # update: delete for all record types
     
-    bib.delete_field('008')
+    bib.delete_fields('008')
 
     return bib
 
@@ -139,7 +139,7 @@ def edit_5(bib):
 def edit_6(bib):
     # 6. BIBLIOGRAPHIC, VOTING - Delete field 035 - IF 089__b is NOT B22 (keep 035 for speeches)
     if not any([x == 'Speeches' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('035')
+        bib.delete_fields('035')
 
     return bib
 
@@ -147,7 +147,7 @@ def edit_6(bib):
 def edit_7(bib):
     # 7. BIBLIOGRAPHIC - Delete field 069 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('069')
+        bib.delete_fields('069')
 
     return bib
 
@@ -191,7 +191,7 @@ def edit_11(bib):
 def edit_12(bib):
     # 12. BIBLIOGRAPHIC - Delete field 222 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('222')
+        bib.delete_fields('222')
 
     return bib
 
@@ -199,7 +199,7 @@ def edit_12(bib):
 def edit_13(bib):
     # 13. VOTING, SPEECHES - Delete field 269 - If (089:B22 OR  089:B23) - Only speeches and votes
     if any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('269')
+        bib.delete_fields('269')
 
     return bib
 
@@ -239,7 +239,7 @@ def edit_16(bib):
 def edit_17(bib):
     # 17. BIBLIOGRAPHIC - Delete field 773 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('773')
+        bib.delete_fields('773')
 
     return bib
 
@@ -247,7 +247,7 @@ def edit_17(bib):
 def edit_18(bib):
     # 18. BIBLIOGRAPHIC - Delete field 910 - No conditions
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('910')
+        bib.delete_fields('910')
 
     return bib
 
@@ -255,7 +255,7 @@ def edit_18(bib):
 def edit_19(bib):
     # 19. BIBLIOGRAPHIC - Delete field 920 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('920')
+        bib.delete_fields('920')
 
     return bib
 
@@ -263,7 +263,7 @@ def edit_19(bib):
 def edit_20(bib):
     # 20. BIBLIOGRAPHIC - Delete field 949 - TO COMPLETE AFTER DECISION
     # update: go ahead
-    bib.delete_field('949')
+    bib.delete_fields('949')
 
     return bib
 
@@ -271,7 +271,7 @@ def edit_20(bib):
 def edit_21(bib):
     # 21. BIBLIOGRAPHIC - Delete field 955 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('955')
+        bib.delete_fields('955')
 
     return bib
 
@@ -279,7 +279,7 @@ def edit_21(bib):
 def edit_22(bib):
     # 22. BIBLIOGRAPHIC - Delete field 995 - No condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
-        bib.delete_field('995')
+        bib.delete_fields('995')
 
     return bib
 
