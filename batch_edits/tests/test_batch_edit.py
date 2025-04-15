@@ -274,7 +274,7 @@ def test_edit_54():
     assert all([bib.get_value('710', '9') for bib in votes])
 
 def test_edit_55():
-    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - Indicator 1 - if 269>2014
+    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a > 2014: delete both, else delete ind2 only
     import re
 
     [bib.set('269', 'a', '2013') for bib in all_records()[:15]]
@@ -282,12 +282,13 @@ def test_edit_55():
     Auth().set('150', 'a', 'OK').commit()
     
     for bib in all_records():
-        bib.set('650', 'a', 'OK', ind1='😇')
+        bib.set('650', 'a', 'OK', ind1='1', ind2='2')
 
     assert all([re.match('(2013|2015)', bib.get_value('269', 'a')) for bib in all_records()])
-    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 30
+    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '1']) == 30
     [batch_edit.edit_55(bib) for bib in all_records()]
-    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '😇']) == 15
+    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '1']) == 15
+    assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind2 == '2']) == 0
 
 def test_edit_56():
     # NEW: BIBLIOGRAPHIC - Delete field 529 - No condition
@@ -296,7 +297,7 @@ def test_edit_56():
     [batch_edit.edit_56(bib) for bib in all_records()]
     assert not any([bib.get_value('529', 'a') for bib in defaults])
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
-    
+
 ### abstracted functions
 
 @pytest.mark.skip(reason='Not implemented yet')
