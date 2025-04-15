@@ -1,4 +1,4 @@
-# batch-edits-1
+# batch-edits
 A series of hardcoded updates to the DLX data as specified by IAMU
 
 ### Installation
