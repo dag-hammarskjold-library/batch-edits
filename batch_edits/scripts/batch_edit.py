@@ -2,9 +2,11 @@
 
 import sys, os, re, json, inspect, time, copy
 from argparse import ArgumentParser
+from datetime import datetime
+from pytz import timezone
 from batch_edits.module import Class # rename package, module and class
 from dlx import DB
-from dlx.marc import BibSet, Diff, Query, Condition
+from dlx.marc import BibSet, Bib, Datafield, Diff, Query, Condition
 
 USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
@@ -54,15 +56,18 @@ def run(**kwargs):
 
         for field in bib.datafields:
             if field.ind1 == '_':
-                field.set(None, None, ind1=' ')
+                field.ind1 = ' '
 
             if field.ind2 == '_':
-                field.set(None, None, ind2=' ')
+                field.ind2 = ' '
 
         before_edits = copy.deepcopy(bib)
 
         for edit in edits:
             bib = edit(bib)
+
+            if not isinstance(bib, Bib):
+                raise Exception('Edit function not returning a Bib object')
             
         if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
             if args.view_changes:
@@ -388,6 +393,16 @@ def edit_56(bib):
     # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         bib.delete_fields('529')
+
+    return bib
+
+# add 999
+def edit_57(bib):
+    # NEW: ALL - Add 999
+    date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')
+    field = Datafield('999', record_type='bib')
+    field.set('a', f'jsb{date}').set('b', date).set('c', 'b')
+    bib.fields.append(field)
 
     return bib
 
