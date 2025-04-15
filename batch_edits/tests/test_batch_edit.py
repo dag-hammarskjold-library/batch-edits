@@ -1,4 +1,6 @@
 import sys, pytest, random
+from datetime import datetime
+from pytz import timezone
 from dlx import DB
 from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
 from batch_edits.scripts import batch_edit
@@ -296,6 +298,14 @@ def test_edit_56():
     [batch_edit.edit_56(bib) for bib in all_records()]
     assert not any([bib.get_value('529', 'a') for bib in defaults])
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
+
+def test_edit_57():
+    # add 999
+    [batch_edit.edit_57(bib) for bib in all_records()]
+    date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')
+    assert all([f'jsb{date}' in bib.get_values('999', 'a') for bib in all_records()])
+    assert all([date in bib.get_values('999', 'b') for bib in all_records()])
+    assert all([f'b' in bib.get_values('999', 'c') for bib in all_records()])
     
 ### abstracted functions
 
