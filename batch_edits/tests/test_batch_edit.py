@@ -208,7 +208,7 @@ def test_edit_23_34_36_42():
     # 43.2 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 785 - No conditions
     # 43.3 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 362 - No conditions
     # 43.4 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 490 - No conditions
-    tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '785', '830')
+    tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '700', '710', '711', '730', '740', '767', '780', '785', '830')
   
     for tag in tags:
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
@@ -277,17 +277,17 @@ def test_edit_54():
     assert all([bib.get_value('710', '9') for bib in votes])
 
 def test_edit_55():
-    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a > 2014: delete both, else delete ind2 only
+    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a < 2014 delete ind2 else delete both
     import re
 
     [bib.set('269', 'a', '2013') for bib in all_records()[:15]]
-    [bib.set('269', 'a', '2015') for bib in all_records()[15:]]
+    [bib.set('269', 'a', '2014') for bib in all_records()[15:]]
     Auth().set('150', 'a', 'OK').commit()
     
     for bib in all_records():
         bib.set('650', 'a', 'OK', ind1='1', ind2='2')
 
-    assert all([re.match('(2013|2015)', bib.get_value('269', 'a')) for bib in all_records()])
+    assert all([re.match('(2013|2014)', bib.get_value('269', 'a')) for bib in all_records()])
     assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '1']) == 30
     [batch_edit.edit_55(bib) for bib in all_records()]
     assert len([bib for bib in all_records() if bib.get_fields('650')[0].ind1 == '1']) == 15
