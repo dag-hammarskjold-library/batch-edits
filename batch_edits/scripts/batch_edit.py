@@ -280,6 +280,7 @@ def edit_23_34_36_42(bib):
     # 33. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 611 - No conditions
     # 34. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 630 - No conditions
     # 36. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 700 - No conditions
+    # *DISABLED* 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
     # 37. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 710 - No conditions
     # 38. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 711 - No conditions
     # 39. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 730 - No conditions
@@ -290,19 +291,12 @@ def edit_23_34_36_42(bib):
     # 43.2 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 785 - No conditions
     # 43.3 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 362 - No conditions
     # 43.4 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 490 - No conditions
-    tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '650', '700', '710', '711', '730', '740', '767', '780', '785', '830')
+    tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '700', '710', '711', '730', '740', '767', '780', '785', '830')
     
     for tag in tags:
         for field in bib.get_fields(tag):
             field.ind1 = ' ' if field.ind1 not in (' ', '_') else field.ind1
             field.ind2 = ' ' if field.ind2 not in (' ', '_') else field.ind2
-
-    return bib
-
-def edit_35(bib):
-    # 35. BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 650 - No conditions
-    for field in bib.get_fields('650'):
-        field.ind2 = ' ' if field.ind2 not in (' ', '_') else field.ind2
 
     return bib
 
