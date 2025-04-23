@@ -207,7 +207,7 @@ def edit_16(bib):
     # 16. BIBLIOGRAPHIC - Delete field 597 - If 597:"Retrospective indexing"
 
     # skip for now
-    return 
+    return bib
 
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for field in bib.get_fields('597'):
