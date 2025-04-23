@@ -370,14 +370,14 @@ def edit_54(bib):
     return bib
 
 def edit_55(bib):
-    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a > 2014: delete both, else delete ind2 only
+    # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a < 2014 delete ind2 else delete both
     date = bib.get_value('269', 'a')
 
     for field in bib.get_fields('650'):
-        if int(date[:4]) > 2014:
-            field.ind1 = ' '
+        if int(date[:4]) < 2014:
             field.ind2 = ' '
         else:
+            field.ind1 = ' '
             field.ind2 = ' '
 
     return bib
