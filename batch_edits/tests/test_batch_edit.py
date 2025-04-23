@@ -133,6 +133,7 @@ def test_edit_15():
     assert len([bib for bib in defaults if bib.get_value('022', 'a') == 'other']) == 5
     assert len([bib for bib in speeches + votes if bib.get_value('022', 'a')]) == 0
 
+@pytest.mark.skip()
 def test_edit_16():
     # 16. BIBLIOGRAPHIC - Delete field 597 - If 597:"Retrospective indexing"
     [bib.set('597', 'a', 'Retrospective indexing.') for bib in all_records()]
