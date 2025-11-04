@@ -47,12 +47,14 @@ def test_edit_2():
 def test_edit_3():
     # 3. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 930 - If NOT 930:UND* OR 930:UNGREY* OR 930:CIF* OR 930:DIG* OR 930:HUR*  oR 930:PER*
     # ?subfield $a?
-    values = ['UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER']
-    [bib.set('930', 'a', random.choice(values)) for bib in all_records()[:20]]                  # 20 records have fields to keep
-    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                # 10 records have fields to delete     
+    values = ['UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER', 'PN']
+    values = values + values + [random.choice(values) for x in range(4)]                          # make the array 20 elements using all the values to keep
+    [bib.set('930', 'a', values[i]) for i, bib in enumerate(all_records()[:20])]                  # 20 records have fields to keep
+    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                  # 10 records have fields to delete     
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 10
     [batch_edit.edit_3(bib) for bib in all_records()]
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 0
+    assert len([bib for bib in all_records() if bib.get_value('930', 'a') in values]) == 20
 
 def test_edit_4():
     # 4. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 000 - No condition
