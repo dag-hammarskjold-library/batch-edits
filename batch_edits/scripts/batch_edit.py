@@ -22,6 +22,7 @@ def get_args():
     parser.add_argument('--output_file', help='File to write output to if output is mrk')
     parser.add_argument('--skip_confirm', action='store_true', help='')
     parser.add_argument('--view_changes', action='store_true', help='')
+    parser.add_argument('--initials', help='Initials to use for commits (overrides default batch_edit_ timestamp)')
 
     return parser.parse_args()
 
@@ -46,6 +47,9 @@ def run(**kwargs):
         else:
             OUT = sys.stdout
 
+    if args.initials:
+        initials = args.initials
+
     query = Query.from_string(args.querystring) if args.querystring else json.loads(args.query) if args.query else {}
     bibs = BibSet.from_query(query, limit=args.limit)
     edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
@@ -68,6 +72,11 @@ def run(**kwargs):
 
             if not isinstance(bib, Bib):
                 raise Exception('Edit function not returning a Bib object')
+        
+        initials = args.initials if args.initials else 'js'
+        if len(initials) > 2:
+            initials = initials[:2]
+        bib = add_999(bib, initials)
             
         if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
             if args.view_changes:
@@ -395,11 +404,14 @@ def edit_56(bib):
     return bib
 
 # add 999
-def edit_57(bib):
+'''
+Takes the 999 addition out of the regular edits so that initials can be passed in from command line
+'''
+def add_999(bib, initials='js'):
     # NEW: ALL - Add 999
     date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')
     field = Datafield('999', record_type='bib')
-    field.set('a', f'jsb{date}').set('b', date).set('c', 'b')
+    field.set('a', f'{initials}b{date}').set('b', date).set('c', 'b')
     bib.fields.append(field)
 
     return bib
