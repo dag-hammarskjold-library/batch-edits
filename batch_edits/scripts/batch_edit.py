@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--output_file', help='File to write output to if output is mrk')
     parser.add_argument('--skip_confirm', action='store_true', help='')
     parser.add_argument('--view_changes', action='store_true', help='')
-    parser.add_argument('--initials', help='Initials to use for commits (overrides default batch_edit_ timestamp)')
+    parser.add_argument('--initials', help='Initials to use for the 999 field (default: js)')
 
     return parser.parse_args()
 
