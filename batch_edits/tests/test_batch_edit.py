@@ -305,7 +305,7 @@ def test_edit_56():
 
 def test_edit_57():
     # add 999
-    [batch_edit.edit_57(bib) for bib in all_records()]
+    [batch_edit.add_999(bib, initials='js') for bib in all_records()]
     date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')
     assert all([f'jsb{date}' in bib.get_values('999', 'a') for bib in all_records()])
     assert all([date in bib.get_values('999', 'b') for bib in all_records()])
