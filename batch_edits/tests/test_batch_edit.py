@@ -304,6 +304,59 @@ def test_edit_56():
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
 
 def test_edit_57():
+    # BIBLIOGRAPHIC - Delete subfield 610 $g if value is None
+    from dlx.marc import Auth
+
+    # Create valid authority record
+    Auth().set('110', 'a', 'dummy').commit()
+
+    [bib.set('610', 'a', 'dummy') for bib in all_records()]
+    
+    # Add $g with None value to some records
+    for bib in all_records()[:15]:
+        field = bib.get_field('610')
+        field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields)]) == 15
+    [batch_edit.edit_57(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields if hasattr(bib.get_field('610'), 'subfields'))])
+
+def test_edit_58():
+    # BIBLIOGRAPHIC - Delete subfield 611 $a if value is None
+    from dlx.marc import Auth
+
+    # Create valid authority record
+    Auth().set('111', 'a', 'dummy').commit()
+
+    [bib.set('611', 'a', 'dummy') for bib in all_records()]
+    
+    # Add $a with None value to some records
+    for bib in all_records()[:15]:
+        field = bib.get_field('611')
+        field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields)]) == 15
+    [batch_edit.edit_58(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields if hasattr(bib.get_field('611'), 'subfields'))])
+
+def test_edit_59():
+    # BIBLIOGRAPHIC - Delete subfield 191 $c if value is None
+    from dlx.marc import Auth
+
+    Auth().set('190', 'c', 'dummy').commit()
+    
+    [bib.set('191', 'c', 'dummy') for bib in all_records()]
+    
+    # Add $c with None value to some records
+    for bib in all_records()[:15]:
+        field = bib.get_field('191')
+        field.subfields.append(type('obj', (object,), {'code': 'c', 'value': None})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields)]) == 15
+    [batch_edit.edit_59(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields if hasattr(bib.get_field('191'), 'subfields'))])
+
+def test_add_999():
     # add 999
     [batch_edit.add_999(bib, initials='js') for bib in all_records()]
     date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')

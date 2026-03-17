@@ -386,8 +386,13 @@ def edit_55(bib):
     # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a < 2014 delete ind2 else delete both
     date = bib.get_value('269', 'a')
 
+    try:
+        int_date = int(date[:4])
+    except ValueError:
+        int_date = None
+
     for field in bib.get_fields('650'):
-        if int(date[:4]) < 2014:
+        if int_date and int_date < 2014:
             field.ind2 = ' '
         else:
             field.ind1 = ' '
@@ -400,6 +405,28 @@ def edit_56(bib):
     # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         bib.delete_fields('529')
+
+    return bib
+
+# delete invalid authority controlled subfields
+def edit_57(bib):
+    # BIBLIOGRAPHIC - Delete subfield 610 $g if value is None
+    for field in bib.get_fields('610'):
+        field.subfields = [x for x in field.subfields if not (x.code == 'g' and x.value is None)]
+
+    return bib
+
+def edit_58(bib):
+    # BIBLIOGRAPHIC - Delete subfield 611 $a if value is None
+    for field in bib.get_fields('611'):
+        field.subfields = [x for x in field.subfields if not (x.code == 'a' and x.value is None)]
+
+    return bib
+
+def edit_59(bib):
+    # BIBLIOGRAPHIC - Delete subfield 191 $c if value is None
+    for field in bib.get_fields('191'):
+        field.subfields = [x for x in field.subfields if not (x.code == 'c' and x.value is None)]
 
     return bib
 
