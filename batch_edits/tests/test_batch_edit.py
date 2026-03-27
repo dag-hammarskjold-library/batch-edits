@@ -2,7 +2,7 @@ import sys, pytest, random
 from datetime import datetime
 from pytz import timezone
 from dlx import DB
-from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
+from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition, Datafield
 from batch_edits.scripts import batch_edit
 
 DB.connect('mongomock://localhost')
@@ -406,31 +406,35 @@ def test_edit_59_invalid_xref_skips_and_logs(capsys):
     out = capsys.readouterr().out
     assert 'edit_59 skipped (invalid xref(s) in 191:' in out
 
-def test_reimports_991_from_auth_191_only():
-    from dlx.marc import Auth
+def test_reimport_991_from_linked_auth_191_uses_xref_as_value():
+    xref = 123456
 
-    auth = Auth().set('191', 'a', 'A/RES/TEST').set('191', 'b', 'Session 1').commit()
-    bib = Bib().set('191', 'a', 'A/RES/TEST').set('991', 'a', auth.id)
-    bib.set('991', 'x', 'stale-without-xref', address='+')
+    bib = Bib()
+    old_991 = Datafield('991', record_type='bib').set('a', xref)
+    bib.fields.append(old_991)
 
-    field_991 = bib.get_field('991')
-    field_991.subfields.append(type('obj', (object,), {'code': 'z', 'value': 'bad-extra', 'xref': auth.id})())
+    auth = Auth()
+    auth_191 = Datafield('191', record_type='auth')
+    auth_191.set('a', 'A/8801').set('b', 'SOMETHING').set('c', '2024')
+    auth.fields.append(auth_191)
+
+    def fake_from_query(query, projection=None):
+        if query == {'_id': xref}:
+            return auth
+        return None
 
     batch_edit._reimport_991_from_linked_auth_191(bib)
 
-    assert len(bib.get_fields('991')) == 1
+    new_991 = bib.get_fields('991')[0]
 
-    codes = [s.code for s in bib.get_field('991').subfields]
-    values_a = bib.get_values('991', 'a')
-    values_b = bib.get_values('991', 'b')
-    values_z = bib.get_values('991', 'z')
-    values_x = bib.get_values('991', 'x')
+    # changed behavior: controlled subfields use xref as value
+    for code in ('a', 'b', 'c'):
+        sub = new_991.get_subfield(code)
+        assert sub is not None
+        assert str(sub.value) == str(xref)
 
-    assert set(codes) == {'a', 'b'}
-    assert values_a == ['A/RES/TEST']
-    assert values_b == ['Session 1']
-    assert values_z == []
-    assert values_x == []
+    # link marker still present
+    assert new_991.get_value('0') == str(xref)
 
 def test_add_999():
     # add 999

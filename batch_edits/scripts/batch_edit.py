@@ -523,13 +523,18 @@ def _reimport_991_from_linked_auth_191(bib):
         new_field = Datafield('991', record_type='bib')
 
         for sub in auth_191.subfields:
-            if sub.value is None:
+            if sub.code == '0' or sub.value is None:
                 continue
 
-            new_field.set(sub.code, sub.value, place='+', auth_control=False)
+            new_field.set(sub.code, xref)
+
+        if not new_field.get_subfield('0'):
+            new_field.set('0', str(xref))
 
         if new_field.subfields:
             bib.fields.append(new_field)
+
+    return bib
 
 def edit_57(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
