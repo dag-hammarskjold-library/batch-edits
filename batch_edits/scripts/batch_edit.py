@@ -499,29 +499,37 @@ def _invalid_xrefs_in_field(field):
     return invalid
 
 def _reimport_991_from_linked_auth_191(bib):
-    """Rebuild 991 subfields from the linked authority record's 191 field."""
+    """Replace 991 fields with values copied from linked authority 191 fields."""
+    xrefs = []
+
     for field in bib.get_fields('991'):
-        xref = next((sub.xref for sub in field.subfields if hasattr(sub, 'xref')), None)
+        for sub in field.subfields:
+            if hasattr(sub, 'xref') and sub.xref not in xrefs:
+                xrefs.append(sub.xref)
 
-        if not xref:
-            continue
+    bib.delete_fields('991')
 
+    for xref in xrefs:
         auth = Auth.from_query({'_id': xref})
 
         if not auth:
             continue
 
         auth_191 = auth.get_field('191')
-        field.subfields = []
 
         if not auth_191:
             continue
+
+        new_field = Datafield('991', record_type='bib')
 
         for sub in auth_191.subfields:
             if sub.value is None:
                 continue
 
-            field.set(sub.code, sub.value, place='+', auth_control=False)
+            new_field.set(sub.code, sub.value, place='+', auth_control=False)
+
+        if new_field.subfields:
+            bib.fields.append(new_field)
 
 def edit_57(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping

@@ -411,21 +411,26 @@ def test_reimports_991_from_auth_191_only():
 
     auth = Auth().set('191', 'a', 'A/RES/TEST').set('191', 'b', 'Session 1').commit()
     bib = Bib().set('191', 'a', 'A/RES/TEST').set('991', 'a', auth.id)
+    bib.set('991', 'x', 'stale-without-xref', address='+')
 
     field_991 = bib.get_field('991')
     field_991.subfields.append(type('obj', (object,), {'code': 'z', 'value': 'bad-extra', 'xref': auth.id})())
 
     batch_edit._reimport_991_from_linked_auth_191(bib)
 
+    assert len(bib.get_fields('991')) == 1
+
     codes = [s.code for s in bib.get_field('991').subfields]
     values_a = bib.get_values('991', 'a')
     values_b = bib.get_values('991', 'b')
     values_z = bib.get_values('991', 'z')
+    values_x = bib.get_values('991', 'x')
 
     assert set(codes) == {'a', 'b'}
     assert values_a == ['A/RES/TEST']
     assert values_b == ['Session 1']
     assert values_z == []
+    assert values_x == []
 
 def test_add_999():
     # add 999
