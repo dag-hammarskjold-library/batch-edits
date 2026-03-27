@@ -304,25 +304,27 @@ def test_edit_56():
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
 
 def test_edit_57():
-    # BIBLIOGRAPHIC - Delete subfield 610 $g if value is None
+    # BIBLIOGRAPHIC - Re-import subfield 610 $g from linked auth when value is None
     from dlx.marc import Auth
 
-    # Create valid authority record
-    Auth().set('110', 'a', 'dummy').commit()
+    # Create valid authority record for both $a and $g
+    Auth().set('110', 'a', 'dummy').set('110', 'g', 'dummy-g').commit()
 
-    [bib.set('610', 'a', 'dummy') for bib in all_records()]
+    [bib.set('610', 'a', 'dummy').set('610', 'g', 'dummy-g') for bib in all_records()]
     
-    # Add $g with None value to some records
+    # Add mutable $g=None with xref so edit_57 must recover it from auth lookup
     for bib in all_records()[:15]:
         field = bib.get_field('610')
-        field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None})())
+        xref = field.get_subfield('g').xref
+        field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None, 'xref': xref})())
     
     assert len([bib for bib in all_records()[:15] if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields)]) == 15
     [batch_edit.edit_57(bib) for bib in all_records()]
     assert not any([bib for bib in all_records() if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields if hasattr(bib.get_field('610'), 'subfields'))])
+    assert all([bib.get_value('610', 'g') == 'dummy-g' for bib in all_records()])
 
 def test_edit_58():
-    # BIBLIOGRAPHIC - Delete subfield 611 $a if value is None
+    # BIBLIOGRAPHIC - Re-import subfield 611 $a from linked auth when value is None
     from dlx.marc import Auth
 
     # Create valid authority record
@@ -330,31 +332,35 @@ def test_edit_58():
 
     [bib.set('611', 'a', 'dummy') for bib in all_records()]
     
-    # Add $a with None value to some records
+    # Add mutable $a=None with xref so edit_58 must recover it from auth lookup
     for bib in all_records()[:15]:
         field = bib.get_field('611')
-        field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None})())
+        xref = field.get_subfield('a').xref
+        field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None, 'xref': xref})())
     
     assert len([bib for bib in all_records()[:15] if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields)]) == 15
     [batch_edit.edit_58(bib) for bib in all_records()]
     assert not any([bib for bib in all_records() if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields if hasattr(bib.get_field('611'), 'subfields'))])
+    assert all([bib.get_value('611', 'a') == 'dummy' for bib in all_records()])
 
 def test_edit_59():
-    # BIBLIOGRAPHIC - Delete subfield 191 $c if value is None
+    # BIBLIOGRAPHIC - Re-import subfield 191 $c from linked auth when value is None
     from dlx.marc import Auth
 
     Auth().set('190', 'c', 'dummy').commit()
     
     [bib.set('191', 'c', 'dummy') for bib in all_records()]
     
-    # Add $c with None value to some records
+    # Add mutable $c=None with xref so edit_59 must recover it from auth lookup
     for bib in all_records()[:15]:
         field = bib.get_field('191')
-        field.subfields.append(type('obj', (object,), {'code': 'c', 'value': None})())
+        xref = field.get_subfield('c').xref
+        field.subfields.append(type('obj', (object,), {'code': 'c', 'value': None, 'xref': xref})())
     
     assert len([bib for bib in all_records()[:15] if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields)]) == 15
     [batch_edit.edit_59(bib) for bib in all_records()]
     assert not any([bib for bib in all_records() if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields if hasattr(bib.get_field('191'), 'subfields'))])
+    assert all([bib.get_value('191', 'c') == 'dummy' for bib in all_records()])
 
 def test_add_999():
     # add 999

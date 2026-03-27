@@ -6,7 +6,7 @@ from datetime import datetime
 from pytz import timezone
 from batch_edits.module import Class # rename package, module and class
 from dlx import DB
-from dlx.marc import BibSet, Bib, Datafield, Diff, Query, Condition
+from dlx.marc import BibSet, Bib, Auth, Datafield, Diff, Query, Condition
 
 USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
@@ -408,29 +408,54 @@ def edit_56(bib):
 
     return bib
 
+def _reimport_none_subfields_from_auth(field):
+    """Try to repopulate None subfield values from linked authority records."""
+    xrefs_in_field = [sub.xref for sub in field.subfields if hasattr(sub, 'xref')]
+    fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
+
+    for sub in field.subfields:
+        if sub.value is not None:
+            continue
+
+        xref = getattr(sub, 'xref', None) or fallback_xref
+
+        if not xref:
+            continue
+
+        looked_up = Auth.lookup(xref, sub.code)
+
+        if looked_up is not None:
+            sub.value = looked_up
+
 def edit_57(bib):
-    # BIBLIOGRAPHIC - Skip edit and log if 610 $g has None value
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('610'):
+        _reimport_none_subfields_from_auth(field)
+
         if any(x.code == 'g' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_57 skipped (610$g has None value)')
+            print(f'--> record id {bib.id}: edit_57 skipped (610$g still None after xref re-validation)')
             return bib
 
     return bib
 
 def edit_58(bib):
-    # BIBLIOGRAPHIC - Skip edit and log if 611 $a has None value
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('611'):
+        _reimport_none_subfields_from_auth(field)
+
         if any(x.code == 'a' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_58 skipped (611$a has None value)')
+            print(f'--> record id {bib.id}: edit_58 skipped (611$a still None after xref re-validation)')
             return bib
 
     return bib
 
 def edit_59(bib):
-    # BIBLIOGRAPHIC - Skip edit and log if 191 $c has None value
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('191'):
+        _reimport_none_subfields_from_auth(field)
+
         if any(x.code == 'c' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_59 skipped (191$c has None value)')
+            print(f'--> record id {bib.id}: edit_59 skipped (191$c still None after xref re-validation)')
             return bib
 
     return bib
