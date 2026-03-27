@@ -408,25 +408,30 @@ def edit_56(bib):
 
     return bib
 
-# delete invalid authority controlled subfields
 def edit_57(bib):
-    # BIBLIOGRAPHIC - Delete subfield 610 $g if value is None
+    # BIBLIOGRAPHIC - Skip edit and log if 610 $g has None value
     for field in bib.get_fields('610'):
-        field.subfields = [x for x in field.subfields if not (x.code == 'g' and x.value is None)]
+        if any(x.code == 'g' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_57 skipped (610$g has None value)')
+            return bib
 
     return bib
 
 def edit_58(bib):
-    # BIBLIOGRAPHIC - Delete subfield 611 $a if value is None
+    # BIBLIOGRAPHIC - Skip edit and log if 611 $a has None value
     for field in bib.get_fields('611'):
-        field.subfields = [x for x in field.subfields if not (x.code == 'a' and x.value is None)]
+        if any(x.code == 'a' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_58 skipped (611$a has None value)')
+            return bib
 
     return bib
 
 def edit_59(bib):
-    # BIBLIOGRAPHIC - Delete subfield 191 $c if value is None
+    # BIBLIOGRAPHIC - Skip edit and log if 191 $c has None value
     for field in bib.get_fields('191'):
-        field.subfields = [x for x in field.subfields if not (x.code == 'c' and x.value is None)]
+        if any(x.code == 'c' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_59 skipped (191$c has None value)')
+            return bib
 
     return bib
 
