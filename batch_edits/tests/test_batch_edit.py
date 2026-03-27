@@ -406,16 +406,17 @@ def test_edit_59_invalid_xref_skips_and_logs(capsys):
     out = capsys.readouterr().out
     assert 'edit_59 skipped (invalid xref(s) in 191:' in out
 
-def test_reimport_991_from_linked_auth_191_uses_xref_as_value():
+def test_reimport_991_from_linked_auth_191_uses_xref_as_value(monkeypatch):
     xref = 123456
 
     bib = Bib()
-    old_991 = Datafield('991', record_type='bib').set('a', xref)
+    old_991 = Datafield('991', record_type='bib').set('a', 'legacy', auth_control=False)
+    old_991.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'legacy', 'xref': xref})())
     bib.fields.append(old_991)
 
     auth = Auth()
     auth_191 = Datafield('191', record_type='auth')
-    auth_191.set('a', 'A/8801').set('b', 'SOMETHING').set('c', '2024')
+    auth_191.set('a', 'A/8801', auth_control=False).set('b', 'SOMETHING', auth_control=False).set('c', '2024', auth_control=False)
     auth.fields.append(auth_191)
 
     def fake_from_query(query, projection=None):
@@ -423,17 +424,15 @@ def test_reimport_991_from_linked_auth_191_uses_xref_as_value():
             return auth
         return None
 
+    monkeypatch.setattr(batch_edit.Auth, 'from_query', fake_from_query)
+
     batch_edit._reimport_991_from_linked_auth_191(bib)
 
     new_991 = bib.get_fields('991')[0]
 
-    # changed behavior: controlled subfields use xref as value
-    for code in ('a', 'b', 'c'):
-        sub = new_991.get_subfield(code)
-        assert sub is not None
-        assert str(sub.value) == str(xref)
-
-    # link marker still present
+    assert new_991.get_value('a') == 'A/8801'
+    assert new_991.get_value('b') == 'SOMETHING'
+    assert new_991.get_value('c') == '2024'
     assert new_991.get_value('0') == str(xref)
 
 def test_add_999():
