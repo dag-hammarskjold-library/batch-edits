@@ -362,6 +362,42 @@ def test_edit_59():
     assert not any([bib for bib in all_records() if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields if hasattr(bib.get_field('191'), 'subfields'))])
     assert all([bib.get_value('191', 'c') == 'dummy' for bib in all_records()])
 
+def test_edit_57_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+
+    Auth().set('110', 'a', 'dummy').set('110', 'g', 'dummy-g').commit()
+    bib = Bib().set('610', 'a', 'dummy').set('610', 'g', 'dummy-g')
+    field = bib.get_field('610')
+    field.subfields.append(type('obj', (object,), {'code': 'g', 'value': 'dummy-g', 'xref': 999999999})())
+
+    batch_edit.edit_57(bib)
+    out = capsys.readouterr().out
+    assert 'edit_57 skipped (invalid xref(s) in 610:' in out
+
+def test_edit_58_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+
+    Auth().set('111', 'a', 'dummy').commit()
+    bib = Bib().set('611', 'a', 'dummy')
+    field = bib.get_field('611')
+    field.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'dummy', 'xref': 999999998})())
+
+    batch_edit.edit_58(bib)
+    out = capsys.readouterr().out
+    assert 'edit_58 skipped (invalid xref(s) in 611:' in out
+
+def test_edit_59_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+
+    Auth().set('190', 'c', 'dummy').commit()
+    bib = Bib().set('191', 'c', 'dummy')
+    field = bib.get_field('191')
+    field.subfields.append(type('obj', (object,), {'code': 'c', 'value': 'dummy', 'xref': 999999997})())
+
+    batch_edit.edit_59(bib)
+    out = capsys.readouterr().out
+    assert 'edit_59 skipped (invalid xref(s) in 191:' in out
+
 def test_add_999():
     # add 999
     [batch_edit.add_999(bib, initials='js') for bib in all_records()]

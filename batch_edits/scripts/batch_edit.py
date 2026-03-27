@@ -427,9 +427,35 @@ def _reimport_none_subfields_from_auth(field):
         if looked_up is not None:
             sub.value = looked_up
 
+def _invalid_xrefs_in_field(field):
+    invalid = []
+    seen = set()
+
+    for sub in field.subfields:
+        if not hasattr(sub, 'xref'):
+            continue
+
+        xref = sub.xref
+
+        if xref in seen:
+            continue
+
+        seen.add(xref)
+
+        if not Auth.from_query({'_id': xref}, projection={'_id': 1}):
+            invalid.append(xref)
+
+    return invalid
+
 def edit_57(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('610'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_57 skipped (invalid xref(s) in 610: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
         _reimport_none_subfields_from_auth(field)
 
         if any(x.code == 'g' and x.value is None for x in field.subfields):
@@ -441,6 +467,12 @@ def edit_57(bib):
 def edit_58(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('611'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_58 skipped (invalid xref(s) in 611: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
         _reimport_none_subfields_from_auth(field)
 
         if any(x.code == 'a' and x.value is None for x in field.subfields):
@@ -452,6 +484,12 @@ def edit_58(bib):
 def edit_59(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
     for field in bib.get_fields('191'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_59 skipped (invalid xref(s) in 191: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
         _reimport_none_subfields_from_auth(field)
 
         if any(x.code == 'c' and x.value is None for x in field.subfields):
