@@ -406,6 +406,27 @@ def test_edit_59_invalid_xref_skips_and_logs(capsys):
     out = capsys.readouterr().out
     assert 'edit_59 skipped (invalid xref(s) in 191:' in out
 
+def test_reimports_991_from_auth_191_only():
+    from dlx.marc import Auth
+
+    auth = Auth().set('191', 'a', 'A/RES/TEST').set('191', 'b', 'Session 1').commit()
+    bib = Bib().set('191', 'a', 'A/RES/TEST').set('991', 'a', auth.id)
+
+    field_991 = bib.get_field('991')
+    field_991.subfields.append(type('obj', (object,), {'code': 'z', 'value': 'bad-extra', 'xref': auth.id})())
+
+    batch_edit._reimport_991_from_linked_auth_191(bib)
+
+    codes = [s.code for s in bib.get_field('991').subfields]
+    values_a = bib.get_values('991', 'a')
+    values_b = bib.get_values('991', 'b')
+    values_z = bib.get_values('991', 'z')
+
+    assert set(codes) == {'a', 'b'}
+    assert values_a == ['A/RES/TEST']
+    assert values_b == ['Session 1']
+    assert values_z == []
+
 def test_add_999():
     # add 999
     [batch_edit.add_999(bib, initials='js') for bib in all_records()]

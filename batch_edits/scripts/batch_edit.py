@@ -88,6 +88,9 @@ def run(**kwargs):
 
         before_edits = copy.deepcopy(bib)
 
+        # Normalize 991 from linked authority 191 before running individual edits.
+        _reimport_991_from_linked_auth_191(bib)
+
         last_edit = None
 
         for edit in edits:
@@ -494,6 +497,31 @@ def _invalid_xrefs_in_field(field):
             invalid.append(xref)
 
     return invalid
+
+def _reimport_991_from_linked_auth_191(bib):
+    """Rebuild 991 subfields from the linked authority record's 191 field."""
+    for field in bib.get_fields('991'):
+        xref = next((sub.xref for sub in field.subfields if hasattr(sub, 'xref')), None)
+
+        if not xref:
+            continue
+
+        auth = Auth.from_query({'_id': xref})
+
+        if not auth:
+            continue
+
+        auth_191 = auth.get_field('191')
+        field.subfields = []
+
+        if not auth_191:
+            continue
+
+        for sub in auth_191.subfields:
+            if sub.value is None:
+                continue
+
+            field.set(sub.code, sub.value, place='+', auth_control=False)
 
 def edit_57(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
