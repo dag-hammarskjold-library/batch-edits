@@ -11,6 +11,27 @@ from dlx.marc import BibSet, Bib, Auth, Datafield, Diff, Query, Condition
 USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
 
+def find_invalid_xrefs(record):
+    invalid = []
+    seen = set()
+
+    for field in record.datafields:
+        for sub in field.subfields:
+            if not hasattr(sub, 'xref'):
+                continue
+
+            key = (field.tag, sub.code, sub.xref)
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+
+            if not Auth.from_query({'_id': sub.xref}, projection={'_id': 1}):
+                invalid.append(key)
+
+    return invalid
+
 def get_args():
     parser = ArgumentParser()
     parser.add_argument('--connect', required=True, help='DLX connection string')
@@ -67,8 +88,15 @@ def run(**kwargs):
 
         before_edits = copy.deepcopy(bib)
 
+        last_edit = None
+
         for edit in edits:
-            bib = edit(bib)
+            last_edit = edit.__name__
+
+            try:
+                bib = edit(bib)
+            except Exception as e:
+                raise Exception(f'Record {bib.id}: failed during {last_edit}: {e}') from e
 
             if not isinstance(bib, Bib):
                 raise Exception('Edit function not returning a Bib object')
@@ -89,7 +117,17 @@ def run(**kwargs):
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
                 if args.skip_confirm:
-                    bib.commit(user=USER)
+                    try:
+                        bib.commit(user=USER)
+                    except Exception as e:
+                        invalid_xrefs = find_invalid_xrefs(bib)
+
+                        if invalid_xrefs:
+                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
+
+                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
                 else:
@@ -100,7 +138,17 @@ def run(**kwargs):
                         time.sleep(1)
                         continue
 
-                    bib.commit(user=USER)
+                    try:
+                        bib.commit(user=USER)
+                    except Exception as e:
+                        invalid_xrefs = find_invalid_xrefs(bib)
+
+                        if invalid_xrefs:
+                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
+
+                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
         else:
