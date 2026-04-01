@@ -380,6 +380,28 @@ def test_edit_57_invalid_xref_skips_and_logs(capsys):
     out = capsys.readouterr().out
     assert 'edit_57 skipped (invalid xref(s) in 610:' in out
 
+def test_edit_57_missing_g_in_auth_reimports_existing_subfields(capsys):
+    from dlx.marc import Auth
+
+    value_a = 'dummy-57-missing-g'
+
+    auth = Auth().set('110', 'a', value_a)
+    auth.commit()
+
+    bib = Bib().set('610', 'a', value_a)
+    field = bib.get_field('610')
+    xref = field.get_subfield('a').xref
+    field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None, 'xref': xref})())
+    field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None, 'xref': xref})())
+
+    batch_edit.edit_57(bib)
+
+    out = capsys.readouterr().out
+    assert 'edit_57 skipped' not in out
+    assert not any(x.code == 'a' and x.value is None for x in field.subfields)
+    assert field.get_value('a') == value_a
+    assert not any(x.code == 'g' and x.value is None for x in field.subfields)
+
 def test_edit_58_invalid_xref_skips_and_logs(capsys):
     from dlx.marc import Auth
     value_a = 'dummy-58-invalid'
@@ -433,7 +455,7 @@ def test_reimport_991_from_linked_auth_191_uses_xref_as_value(monkeypatch):
     assert new_991.get_value('a') == 'A/8801'
     assert new_991.get_value('b') == 'SOMETHING'
     assert new_991.get_value('c') == '2024'
-    assert new_991.get_value('0') == str(xref)
+    assert new_991.get_value('0') == ''
 
 def test_add_999():
     # add 999

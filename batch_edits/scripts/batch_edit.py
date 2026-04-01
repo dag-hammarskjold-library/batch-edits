@@ -459,13 +459,18 @@ def edit_56(bib):
 
     return bib
 
-def _reimport_none_subfields_from_auth(field):
-    """Try to repopulate None subfield values from linked authority records."""
+def _reimport_subfields_from_auth(field, include_non_none=False):
+    """Repopulate subfield values from linked authority records.
+
+    By default only subfields with value None are updated. Set
+    include_non_none=True to refresh all linked subfields with available
+    authority values.
+    """
     xrefs_in_field = [sub.xref for sub in field.subfields if hasattr(sub, 'xref')]
     fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
 
     for sub in field.subfields:
-        if sub.value is not None:
+        if sub.value is not None and not include_non_none:
             continue
 
         xref = getattr(sub, 'xref', None) or fallback_xref
@@ -476,7 +481,11 @@ def _reimport_none_subfields_from_auth(field):
         looked_up = Auth.lookup(xref, sub.code)
 
         if looked_up is not None:
-            sub.value = looked_up
+            try:
+                sub.value = looked_up
+            except AttributeError:
+                # Linked subfields can be immutable; keep their resolved value.
+                pass
 
 def _invalid_xrefs_in_field(field):
     invalid = []
@@ -545,7 +554,27 @@ def edit_57(bib):
             print(f"--> record id {bib.id}: edit_57 skipped (invalid xref(s) in 610: {', '.join(map(str, invalid_xrefs))})")
             return bib
 
-        _reimport_none_subfields_from_auth(field)
+        _reimport_subfields_from_auth(field)
+
+        # If xref validation passed and linked auth has no $g, refresh existing
+        # linked values and remove unresolved $g=None placeholders.
+        none_g_subs = [x for x in field.subfields if x.code == 'g' and x.value is None]
+
+        if none_g_subs:
+            xrefs_in_field = [x.xref for x in field.subfields if hasattr(x, 'xref')]
+            fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
+            linked_auth_missing_g = True
+
+            for sub in none_g_subs:
+                xref = getattr(sub, 'xref', None) or fallback_xref
+
+                if xref and Auth.lookup(xref, 'g') is not None:
+                    linked_auth_missing_g = False
+                    break
+
+            if linked_auth_missing_g:
+                _reimport_subfields_from_auth(field, include_non_none=True)
+                field.subfields = [x for x in field.subfields if not (x.code == 'g' and x.value is None)]
 
         if any(x.code == 'g' and x.value is None for x in field.subfields):
             print(f'--> record id {bib.id}: edit_57 skipped (610$g still None after xref re-validation)')
@@ -562,7 +591,7 @@ def edit_58(bib):
             print(f"--> record id {bib.id}: edit_58 skipped (invalid xref(s) in 611: {', '.join(map(str, invalid_xrefs))})")
             return bib
 
-        _reimport_none_subfields_from_auth(field)
+        _reimport_subfields_from_auth(field)
 
         if any(x.code == 'a' and x.value is None for x in field.subfields):
             print(f'--> record id {bib.id}: edit_58 skipped (611$a still None after xref re-validation)')
@@ -579,7 +608,7 @@ def edit_59(bib):
             print(f"--> record id {bib.id}: edit_59 skipped (invalid xref(s) in 191: {', '.join(map(str, invalid_xrefs))})")
             return bib
 
-        _reimport_none_subfields_from_auth(field)
+        _reimport_subfields_from_auth(field)
 
         if any(x.code == 'c' and x.value is None for x in field.subfields):
             print(f'--> record id {bib.id}: edit_59 skipped (191$c still None after xref re-validation)')
