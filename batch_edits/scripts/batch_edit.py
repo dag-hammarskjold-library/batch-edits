@@ -528,8 +528,8 @@ def _reimport_991_from_linked_auth_191(bib):
 
             new_field.set(sub.code, xref)
 
-        if not new_field.get_subfield('0'):
-            new_field.set('0', str(xref))
+        #if not new_field.get_subfield('0'):
+        #    new_field.set('0', str(xref))
 
         if new_field.subfields:
             bib.fields.append(new_field)
