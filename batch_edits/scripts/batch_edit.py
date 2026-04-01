@@ -6,10 +6,31 @@ from datetime import datetime
 from pytz import timezone
 from batch_edits.module import Class # rename package, module and class
 from dlx import DB
-from dlx.marc import BibSet, Bib, Datafield, Diff, Query, Condition
+from dlx.marc import BibSet, Bib, Auth, Datafield, Diff, Query, Condition
 
 USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
+
+def find_invalid_xrefs(record):
+    invalid = []
+    seen = set()
+
+    for field in record.datafields:
+        for sub in field.subfields:
+            if not hasattr(sub, 'xref'):
+                continue
+
+            key = (field.tag, sub.code, sub.xref)
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+
+            if not Auth.from_query({'_id': sub.xref}, projection={'_id': 1}):
+                invalid.append(key)
+
+    return invalid
 
 def get_args():
     parser = ArgumentParser()
@@ -67,8 +88,18 @@ def run(**kwargs):
 
         before_edits = copy.deepcopy(bib)
 
+        # Normalize 991 from linked authority 191 before running individual edits.
+        _reimport_991_from_linked_auth_191(bib)
+
+        last_edit = None
+
         for edit in edits:
-            bib = edit(bib)
+            last_edit = edit.__name__
+
+            try:
+                bib = edit(bib)
+            except Exception as e:
+                raise Exception(f'Record {bib.id}: failed during {last_edit}: {e}') from e
 
             if not isinstance(bib, Bib):
                 raise Exception('Edit function not returning a Bib object')
@@ -89,7 +120,17 @@ def run(**kwargs):
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
                 if args.skip_confirm:
-                    bib.commit(user=USER)
+                    try:
+                        bib.commit(user=USER)
+                    except Exception as e:
+                        invalid_xrefs = find_invalid_xrefs(bib)
+
+                        if invalid_xrefs:
+                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
+
+                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
                 else:
@@ -100,7 +141,17 @@ def run(**kwargs):
                         time.sleep(1)
                         continue
 
-                    bib.commit(user=USER)
+                    try:
+                        bib.commit(user=USER)
+                    except Exception as e:
+                        invalid_xrefs = find_invalid_xrefs(bib)
+
+                        if invalid_xrefs:
+                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
+
+                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
         else:
@@ -386,8 +437,13 @@ def edit_55(bib):
     # NEW: BIBLIOGRAPHIC, VOTING, SPEECHES, BIBLIOGRAPHIC - Delete indicators 650 - if 269$a < 2014 delete ind2 else delete both
     date = bib.get_value('269', 'a')
 
+    try:
+        int_date = int(date[:4])
+    except ValueError:
+        int_date = None
+
     for field in bib.get_fields('650'):
-        if int(date[:4]) < 2014:
+        if int_date and int_date < 2014:
             field.ind2 = ' '
         else:
             field.ind1 = ' '
@@ -400,6 +456,134 @@ def edit_56(bib):
     # NEW: BIBLIOGRAPHIC - Delete field 529 - no condition
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         bib.delete_fields('529')
+
+    return bib
+
+def _reimport_none_subfields_from_auth(field):
+    """Try to repopulate None subfield values from linked authority records."""
+    xrefs_in_field = [sub.xref for sub in field.subfields if hasattr(sub, 'xref')]
+    fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
+
+    for sub in field.subfields:
+        if sub.value is not None:
+            continue
+
+        xref = getattr(sub, 'xref', None) or fallback_xref
+
+        if not xref:
+            continue
+
+        looked_up = Auth.lookup(xref, sub.code)
+
+        if looked_up is not None:
+            sub.value = looked_up
+
+def _invalid_xrefs_in_field(field):
+    invalid = []
+    seen = set()
+
+    for sub in field.subfields:
+        if not hasattr(sub, 'xref'):
+            continue
+
+        xref = sub.xref
+
+        if xref in seen:
+            continue
+
+        seen.add(xref)
+
+        if not Auth.from_query({'_id': xref}, projection={'_id': 1}):
+            invalid.append(xref)
+
+    return invalid
+
+def _reimport_991_from_linked_auth_191(bib):
+    """Replace 991 fields with values copied from linked authority 191 fields."""
+    xrefs = []
+
+    for field in bib.get_fields('991'):
+        for sub in field.subfields:
+            if hasattr(sub, 'xref') and sub.xref not in xrefs:
+                xrefs.append(sub.xref)
+
+    bib.delete_fields('991')
+
+    for xref in xrefs:
+        auth = Auth.from_query({'_id': xref})
+
+        if not auth:
+            continue
+
+        auth_191 = auth.get_field('191')
+
+        if not auth_191:
+            continue
+
+        new_field = Datafield('991', record_type='bib')
+
+        for sub in auth_191.subfields:
+            if sub.code == '0' or sub.value is None:
+                continue
+
+            new_field.set(sub.code, xref)
+
+        if not new_field.get_subfield('0'):
+            new_field.set('0', str(xref))
+
+        if new_field.subfields:
+            bib.fields.append(new_field)
+
+    return bib
+
+def edit_57(bib):
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
+    for field in bib.get_fields('610'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_57 skipped (invalid xref(s) in 610: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
+        _reimport_none_subfields_from_auth(field)
+
+        if any(x.code == 'g' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_57 skipped (610$g still None after xref re-validation)')
+            return bib
+
+    return bib
+
+def edit_58(bib):
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
+    for field in bib.get_fields('611'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_58 skipped (invalid xref(s) in 611: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
+        _reimport_none_subfields_from_auth(field)
+
+        if any(x.code == 'a' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_58 skipped (611$a still None after xref re-validation)')
+            return bib
+
+    return bib
+
+def edit_59(bib):
+    # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
+    for field in bib.get_fields('191'):
+        invalid_xrefs = _invalid_xrefs_in_field(field)
+
+        if invalid_xrefs:
+            print(f"--> record id {bib.id}: edit_59 skipped (invalid xref(s) in 191: {', '.join(map(str, invalid_xrefs))})")
+            return bib
+
+        _reimport_none_subfields_from_auth(field)
+
+        if any(x.code == 'c' and x.value is None for x in field.subfields):
+            print(f'--> record id {bib.id}: edit_59 skipped (191$c still None after xref re-validation)')
+            return bib
 
     return bib
 

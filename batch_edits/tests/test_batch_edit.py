@@ -2,7 +2,7 @@ import sys, pytest, random
 from datetime import datetime
 from pytz import timezone
 from dlx import DB
-from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition
+from dlx.marc import Bib, Auth, BibSet, AuthSet, Query, Condition, Datafield
 from batch_edits.scripts import batch_edit
 
 DB.connect('mongomock://localhost')
@@ -304,6 +304,138 @@ def test_edit_56():
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
 
 def test_edit_57():
+    # BIBLIOGRAPHIC - Re-import subfield 610 $g from linked auth when value is None
+    from dlx.marc import Auth
+    value_a = 'dummy-57'
+    value_g = 'dummy-g-57'
+
+    # Create valid authority record for both $a and $g
+    Auth().set('110', 'a', value_a).set('110', 'g', value_g).commit()
+
+    [bib.set('610', 'a', value_a).set('610', 'g', value_g) for bib in all_records()]
+    
+    # Add mutable $g=None with xref so edit_57 must recover it from auth lookup
+    for bib in all_records()[:15]:
+        field = bib.get_field('610')
+        xref = field.get_subfield('g').xref
+        field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None, 'xref': xref})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields)]) == 15
+    [batch_edit.edit_57(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields if hasattr(bib.get_field('610'), 'subfields'))])
+    assert all([bib.get_value('610', 'g') == value_g for bib in all_records()])
+
+def test_edit_58():
+    # BIBLIOGRAPHIC - Re-import subfield 611 $a from linked auth when value is None
+    from dlx.marc import Auth
+    value_a = 'dummy-58'
+
+    # Create valid authority record
+    Auth().set('111', 'a', value_a).commit()
+
+    [bib.set('611', 'a', value_a) for bib in all_records()]
+    
+    # Add mutable $a=None with xref so edit_58 must recover it from auth lookup
+    for bib in all_records()[:15]:
+        field = bib.get_field('611')
+        xref = field.get_subfield('a').xref
+        field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None, 'xref': xref})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields)]) == 15
+    [batch_edit.edit_58(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields if hasattr(bib.get_field('611'), 'subfields'))])
+    assert all([bib.get_value('611', 'a') == value_a for bib in all_records()])
+
+def test_edit_59():
+    # BIBLIOGRAPHIC - Re-import subfield 191 $c from linked auth when value is None
+    from dlx.marc import Auth
+    value_c = 'dummy-59'
+
+    Auth().set('190', 'c', value_c).commit()
+    
+    [bib.set('191', 'c', value_c) for bib in all_records()]
+    
+    # Add mutable $c=None with xref so edit_59 must recover it from auth lookup
+    for bib in all_records()[:15]:
+        field = bib.get_field('191')
+        xref = field.get_subfield('c').xref
+        field.subfields.append(type('obj', (object,), {'code': 'c', 'value': None, 'xref': xref})())
+    
+    assert len([bib for bib in all_records()[:15] if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields)]) == 15
+    [batch_edit.edit_59(bib) for bib in all_records()]
+    assert not any([bib for bib in all_records() if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields if hasattr(bib.get_field('191'), 'subfields'))])
+    assert all([bib.get_value('191', 'c') == value_c for bib in all_records()])
+
+def test_edit_57_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+    value_a = 'dummy-57-invalid'
+    value_g = 'dummy-g-57-invalid'
+
+    Auth().set('110', 'a', value_a).set('110', 'g', value_g).commit()
+    bib = Bib().set('610', 'a', value_a).set('610', 'g', value_g)
+    field = bib.get_field('610')
+    field.subfields.append(type('obj', (object,), {'code': 'g', 'value': 'dummy-g', 'xref': 999999999})())
+
+    batch_edit.edit_57(bib)
+    out = capsys.readouterr().out
+    assert 'edit_57 skipped (invalid xref(s) in 610:' in out
+
+def test_edit_58_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+    value_a = 'dummy-58-invalid'
+
+    Auth().set('111', 'a', value_a).commit()
+    bib = Bib().set('611', 'a', value_a)
+    field = bib.get_field('611')
+    field.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'dummy', 'xref': 999999998})())
+
+    batch_edit.edit_58(bib)
+    out = capsys.readouterr().out
+    assert 'edit_58 skipped (invalid xref(s) in 611:' in out
+
+def test_edit_59_invalid_xref_skips_and_logs(capsys):
+    from dlx.marc import Auth
+    value_c = 'dummy-59-invalid'
+
+    Auth().set('190', 'c', value_c).commit()
+    bib = Bib().set('191', 'c', value_c)
+    field = bib.get_field('191')
+    field.subfields.append(type('obj', (object,), {'code': 'c', 'value': 'dummy', 'xref': 999999997})())
+
+    batch_edit.edit_59(bib)
+    out = capsys.readouterr().out
+    assert 'edit_59 skipped (invalid xref(s) in 191:' in out
+
+def test_reimport_991_from_linked_auth_191_uses_xref_as_value(monkeypatch):
+    xref = 123456
+
+    bib = Bib()
+    old_991 = Datafield('991', record_type='bib').set('a', 'legacy', auth_control=False)
+    old_991.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'legacy', 'xref': xref})())
+    bib.fields.append(old_991)
+
+    auth = Auth()
+    auth_191 = Datafield('191', record_type='auth')
+    auth_191.set('a', 'A/8801', auth_control=False).set('b', 'SOMETHING', auth_control=False).set('c', '2024', auth_control=False)
+    auth.fields.append(auth_191)
+
+    def fake_from_query(query, projection=None):
+        if query == {'_id': xref}:
+            return auth
+        return None
+
+    monkeypatch.setattr(batch_edit.Auth, 'from_query', fake_from_query)
+
+    batch_edit._reimport_991_from_linked_auth_191(bib)
+
+    new_991 = bib.get_fields('991')[0]
+
+    assert new_991.get_value('a') == 'A/8801'
+    assert new_991.get_value('b') == 'SOMETHING'
+    assert new_991.get_value('c') == '2024'
+    assert new_991.get_value('0') == str(xref)
+
+def test_add_999():
     # add 999
     [batch_edit.add_999(bib, initials='js') for bib in all_records()]
     date = datetime.now().astimezone(timezone('US/Eastern')).strftime(r'%Y%m%d')
