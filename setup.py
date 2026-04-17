@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 NAME = 'batch-edits'
 DESCRIPTION = ''
-VERSION = '1.1.1.dev'
+VERSION = '1.1.2'
 
 with open("README.md") as f:
     long_description = f.read()
