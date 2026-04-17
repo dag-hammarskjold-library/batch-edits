@@ -6,31 +6,70 @@ from datetime import datetime
 from pytz import timezone
 from batch_edits.module import Class # rename package, module and class
 from dlx import DB
-from dlx.marc import BibSet, Bib, Auth, Datafield, Diff, Query, Condition
+from dlx.marc import BibSet, Bib, Auth, Datafield, Diff, Query, Condition, InvalidAuthXref
 
 USER = 'batch_edit_' + str(int(time.time()))
 OUT = None
 
-def find_invalid_xrefs(record):
+def reimport_and_find_invalid_xrefs(record, tag=None):
+    """Refresh linked values from auth records and report unresolved xrefs.
+
+    Returns a list of tuples: (tag, subfield_code, xref).
+    """
     invalid = []
     seen = set()
 
     for field in record.datafields:
+        if tag and field.tag != tag:
+            continue
+
+        # Always attempt a refresh first so any stale linked values are updated.
+        _reimport_subfields_from_auth(field)
+
         for sub in field.subfields:
-            if not hasattr(sub, 'xref'):
+            xref = getattr(sub, 'xref', None)
+
+            if not xref:
                 continue
 
-            key = (field.tag, sub.code, sub.xref)
+            key = (field.tag, sub.code, xref)
 
             if key in seen:
                 continue
 
             seen.add(key)
 
-            if not Auth.from_query({'_id': sub.xref}, projection={'_id': 1}):
+            if not Auth.from_query({'_id': xref}, projection={'_id': 1}):
                 invalid.append(key)
 
     return invalid
+
+def _commit_with_reimport_retry(bib, last_edit):
+    """Commit once, and retry after xref re-import if invalid auth xrefs are hit."""
+    try:
+        bib.commit(user=USER)
+        return
+    except InvalidAuthXref:
+        invalid_xrefs = reimport_and_find_invalid_xrefs(bib)
+
+        if invalid_xrefs:
+            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}')
+
+        # InvalidAuthXref was raised, but re-import resolved links; retry commit once.
+        try:
+            bib.commit(user=USER)
+            return
+        except Exception as e:
+            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+    except Exception as e:
+        invalid_xrefs = reimport_and_find_invalid_xrefs(bib)
+
+        if invalid_xrefs:
+            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
+            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
+
+        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
 
 def get_args():
     parser = ArgumentParser()
@@ -91,6 +130,11 @@ def run(**kwargs):
         # Normalize 991 from linked authority 191 before running individual edits.
         _reimport_991_from_linked_auth_191(bib)
 
+        # Re-import and validate linked subfields before the numbered edits run.
+        if not _preprocess_linked_subfields_before_edits(bib):
+            print(f'--> record id {bib.id}: skipped before edits (linked subfield precheck failed)')
+            continue
+
         last_edit = None
 
         for edit in edits:
@@ -120,16 +164,7 @@ def run(**kwargs):
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
                 if args.skip_confirm:
-                    try:
-                        bib.commit(user=USER)
-                    except Exception as e:
-                        invalid_xrefs = find_invalid_xrefs(bib)
-
-                        if invalid_xrefs:
-                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
-                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
-
-                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+                    _commit_with_reimport_retry(bib, last_edit)
 
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
@@ -141,16 +176,7 @@ def run(**kwargs):
                         time.sleep(1)
                         continue
 
-                    try:
-                        bib.commit(user=USER)
-                    except Exception as e:
-                        invalid_xrefs = find_invalid_xrefs(bib)
-
-                        if invalid_xrefs:
-                            details = '; '.join([f'{tag}${code} xref={xref}' for tag, code, xref in invalid_xrefs])
-                            raise Exception(f'Record {bib.id}: commit failed after {last_edit}; invalid xref(s): {details}; original error: {e}') from e
-
-                        raise Exception(f'Record {bib.id}: commit failed after {last_edit}; original error: {e}') from e
+                    _commit_with_reimport_retry(bib, last_edit)
 
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
@@ -487,25 +513,121 @@ def _reimport_subfields_from_auth(field, include_non_none=False):
                 # Linked subfields can be immutable; keep their resolved value.
                 pass
 
-def _invalid_xrefs_in_field(field):
-    invalid = []
-    seen = set()
+def _reimport_tag_and_validate_required_subfield(
+    bib,
+    tag,
+    required_subfield_code,
+    edit_name,
+    drop_none_if_auth_missing_required=False,
+):
+    """Re-import linked values for a tag and ensure required subfield isn't None."""
+    def _lookup_required(sub):
+        xref = getattr(sub, 'xref', None)
+        return Auth.lookup(xref, required_subfield_code) if xref else None
 
-    for sub in field.subfields:
-        if not hasattr(sub, 'xref'):
-            continue
+    invalid_xrefs = reimport_and_find_invalid_xrefs(bib, tag=tag)
 
-        xref = sub.xref
+    if invalid_xrefs:
+        xrefs = sorted({xref for _, _, xref in invalid_xrefs})
+        print(
+            f"--> record id {bib.id}: {edit_name} skipped "
+            f"(invalid xref(s) in {tag}: {', '.join(map(str, xrefs))})"
+        )
+        return False
 
-        if xref in seen:
-            continue
+    for field in bib.get_fields(tag):
+        _reimport_subfields_from_auth(field)
 
-        seen.add(xref)
+        none_required = [
+            x for x in field.subfields if x.code == required_subfield_code and x.value is None
+        ]
 
-        if not Auth.from_query({'_id': xref}, projection={'_id': 1}):
-            invalid.append(xref)
+        unresolved_required = [
+            x
+            for x in field.subfields
+            if x.code == required_subfield_code
+            and hasattr(x, 'xref')
+            and getattr(x, 'xref', None)
+            and _lookup_required(x) is None
+        ]
 
-    return invalid
+        if drop_none_if_auth_missing_required and (none_required or unresolved_required):
+            xrefs_in_field = [x.xref for x in field.subfields if hasattr(x, 'xref') and getattr(x, 'xref', None)]
+            fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
+            linked_auth_missing_required = True
+
+            for sub in none_required:
+                xref = getattr(sub, 'xref', None) or fallback_xref
+
+                if xref and Auth.lookup(xref, required_subfield_code) is not None:
+                    linked_auth_missing_required = False
+                    break
+
+            if linked_auth_missing_required:
+                _reimport_subfields_from_auth(field, include_non_none=True)
+                field.subfields = [
+                    x
+                    for x in field.subfields
+                    if not (
+                        x.code == required_subfield_code
+                        and (
+                            x.value is None
+                            or (
+                                hasattr(x, 'xref')
+                                and getattr(x, 'xref', None)
+                                and _lookup_required(x) is None
+                            )
+                        )
+                    )
+                ]
+
+        if drop_none_if_auth_missing_required and any(
+            x.code == required_subfield_code
+            and hasattr(x, 'xref')
+            and getattr(x, 'xref', None)
+            and _lookup_required(x) is None
+            for x in field.subfields
+        ):
+            print(
+                f'--> record id {bib.id}: {edit_name} skipped '
+                f'({tag}${required_subfield_code} has unresolved linked xref after re-validation)'
+            )
+            return False
+
+        if any(
+            x.code == required_subfield_code and x.value is None
+            for x in field.subfields
+        ):
+            print(
+                f'--> record id {bib.id}: {edit_name} skipped '
+                f'({tag}${required_subfield_code} still None after xref re-validation)'
+            )
+            return False
+
+    return True
+
+def _preprocess_linked_subfields_before_edits(bib):
+    """Apply linked-subfield re-import/validation before numbered edits."""
+    checks = [
+        ('600', 'g', True),
+        ('610', 'g', True),
+        ('700', 'g', True),
+        ('611', 'g', True),
+        ('611', 'a', False),
+        ('191', 'c', False),
+    ]
+
+    for tag, required_subfield_code, drop_none_if_missing in checks:
+        if not _reimport_tag_and_validate_required_subfield(
+            bib,
+            tag,
+            required_subfield_code,
+            'pre-edit',
+            drop_none_if_auth_missing_required=drop_none_if_missing,
+        ):
+            return False
+
+    return True
 
 def _reimport_991_from_linked_auth_191(bib):
     """Replace 991 fields with values copied from linked authority 191 fields."""
@@ -547,72 +669,38 @@ def _reimport_991_from_linked_auth_191(bib):
 
 def edit_57(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
-    for field in bib.get_fields('610'):
-        invalid_xrefs = _invalid_xrefs_in_field(field)
-
-        if invalid_xrefs:
-            print(f"--> record id {bib.id}: edit_57 skipped (invalid xref(s) in 610: {', '.join(map(str, invalid_xrefs))})")
-            return bib
-
-        _reimport_subfields_from_auth(field)
-
-        # If xref validation passed and linked auth has no $g, refresh existing
-        # linked values and remove unresolved $g=None placeholders.
-        none_g_subs = [x for x in field.subfields if x.code == 'g' and x.value is None]
-
-        if none_g_subs:
-            xrefs_in_field = [x.xref for x in field.subfields if hasattr(x, 'xref')]
-            fallback_xref = xrefs_in_field[0] if xrefs_in_field else None
-            linked_auth_missing_g = True
-
-            for sub in none_g_subs:
-                xref = getattr(sub, 'xref', None) or fallback_xref
-
-                if xref and Auth.lookup(xref, 'g') is not None:
-                    linked_auth_missing_g = False
-                    break
-
-            if linked_auth_missing_g:
-                _reimport_subfields_from_auth(field, include_non_none=True)
-                field.subfields = [x for x in field.subfields if not (x.code == 'g' and x.value is None)]
-
-        if any(x.code == 'g' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_57 skipped (610$g still None after xref re-validation)')
+    for tag in ('600', '610', '700'):
+        if not _reimport_tag_and_validate_required_subfield(
+            bib,
+            tag,
+            'g',
+            'edit_57',
+            drop_none_if_auth_missing_required=True,
+        ):
             return bib
 
     return bib
 
 def edit_58(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
-    for field in bib.get_fields('611'):
-        invalid_xrefs = _invalid_xrefs_in_field(field)
+    if not _reimport_tag_and_validate_required_subfield(
+        bib,
+        '611',
+        'g',
+        'edit_58',
+        drop_none_if_auth_missing_required=True,
+    ):
+        return bib
 
-        if invalid_xrefs:
-            print(f"--> record id {bib.id}: edit_58 skipped (invalid xref(s) in 611: {', '.join(map(str, invalid_xrefs))})")
-            return bib
-
-        _reimport_subfields_from_auth(field)
-
-        if any(x.code == 'a' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_58 skipped (611$a still None after xref re-validation)')
-            return bib
+    if not _reimport_tag_and_validate_required_subfield(bib, '611', 'a', 'edit_58'):
+        return bib
 
     return bib
 
 def edit_59(bib):
     # BIBLIOGRAPHIC - Re-import None subfield values via xref before logging/skipping
-    for field in bib.get_fields('191'):
-        invalid_xrefs = _invalid_xrefs_in_field(field)
-
-        if invalid_xrefs:
-            print(f"--> record id {bib.id}: edit_59 skipped (invalid xref(s) in 191: {', '.join(map(str, invalid_xrefs))})")
-            return bib
-
-        _reimport_subfields_from_auth(field)
-
-        if any(x.code == 'c' and x.value is None for x in field.subfields):
-            print(f'--> record id {bib.id}: edit_59 skipped (191$c still None after xref re-validation)')
-            return bib
+    if not _reimport_tag_and_validate_required_subfield(bib, '191', 'c', 'edit_59'):
+        return bib
 
     return bib
 
