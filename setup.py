@@ -23,7 +23,7 @@ setup(
     description = DESCRIPTION,
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    python_requires = '>=3.8',
+    python_requires = '>=3.10',
     entry_points = {
         # see https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
         'console_scripts': [
