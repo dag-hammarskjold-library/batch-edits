@@ -67,16 +67,6 @@ def run(**kwargs):
 
         before_edits = copy.deepcopy(bib)
 
-        # Normalize 991 from linked authority 191 before running individual edits.
-        _reimport_991_from_linked_auth_191(bib)
-
-        # Re-import and validate linked subfields before the numbered edits run.
-        if not _preprocess_linked_subfields_before_edits(bib):
-            print(f'--> record id {bib.id}: skipped before edits (linked subfield precheck failed)')
-            continue
-
-        last_edit = None
-
         for edit in edits:
             last_edit = edit.__name__
 
@@ -104,8 +94,7 @@ def run(**kwargs):
                 OUT.write(bib.to_mrk() + '\n')
             elif args.output == 'db':
                 if args.skip_confirm:
-                    _commit_with_reimport_retry(bib, last_edit)
-
+                    bib.commit(user=USER)
                     status = ('\b' * len(status)) + f'Records updated: {i}'
                     print(status, end='', flush=True)
                 else:
@@ -116,8 +105,7 @@ def run(**kwargs):
                         time.sleep(1)
                         continue
 
-                    _commit_with_reimport_retry(bib, last_edit)
-
+                    bib.commit(user=USER)
                     print(f'OK. Updated {bib.id}\n')
                     time.sleep(1)
         else:

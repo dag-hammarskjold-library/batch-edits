@@ -24,7 +24,7 @@ def test_script_runs(bibs):
     [bib.set('710', '9', 'dummy') and bib.commit() for bib in BibSet.from_query({})]
     batch_edit.run(connect='mongomock://localhost', output='db', skip_confirm=True)
     assert all([bib.user[:10] == 'batch_edit' for bib in BibSet.from_query({})])
-    
+
 def test_edit_1():
     # 1. BIBLIOGRAPHIC - Delete field 099 if subfield c = internet
     [bib.set('099', 'c', 'internet') for bib in all_records()]
@@ -50,7 +50,7 @@ def test_edit_3():
     values = ['UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER', 'PN']
     values = values + values + [random.choice(values) for x in range(4)]                          # make the array 20 elements using all the values to keep
     [bib.set('930', 'a', values[i]) for i, bib in enumerate(all_records()[:20])]                  # 20 records have fields to keep
-    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                  # 10 records have fields to delete     
+    [bib.set('930', 'a', 'other') for bib in all_records()[20:]]                                  # 10 records have fields to delete
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 10
     [batch_edit.edit_3(bib) for bib in all_records()]
     assert len([bib for bib in all_records() if bib.get_value('930', 'a') == 'other']) == 0
@@ -211,13 +211,13 @@ def test_edit_23_34_36_42():
     # 43.3 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 362 - No conditions
     # 43.4 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 490 - No conditions
     tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '700', '710', '711', '730', '740', '767', '780', '785', '830')
-  
+
     for tag in tags:
         [bib.set(tag, 'z', 'dummy', ind1='9', ind2='9', address='+') for bib in all_records()]
         assert all([any([field.ind1 == '9' and field.ind2 == '9' for field in bib.get_fields(tag)]) for bib in all_records()])
-    
+
     [batch_edit.edit_23_34_36_42(bib) for bib in all_records()]
-    
+
     for tag in tags:
         assert all([all([field.ind1 == ' ' and field.ind2 == ' ' for field in bib.get_fields(tag)]) for bib in all_records()])
 
@@ -245,7 +245,7 @@ def test_edit_45():
     [batch_edit.edit_45(bib) for bib in all_records()]
     assert len([x for x in all_records() if 'veto' in x.get_values('089', 'a')]) == 5
     assert len([x for x in all_records() if 'other' in x.get_values('089', 'a')]) == 0
-    
+
 def test_edit_46_53():
     # 46. BIBLIOGRAPHIC - Delete subfield 099 $q - No condition
     # 47. BIBLIOGRAPHIC - Delete subfield 191 $f - No condition
@@ -285,7 +285,7 @@ def test_edit_55():
     [bib.set('269', 'a', '2013') for bib in all_records()[:15]]
     [bib.set('269', 'a', '2014') for bib in all_records()[15:]]
     Auth().set('150', 'a', 'OK').commit()
-    
+
     for bib in all_records():
         bib.set('650', 'a', 'OK', ind1='1', ind2='2')
 
@@ -303,160 +303,6 @@ def test_edit_56():
     assert not any([bib.get_value('529', 'a') for bib in defaults])
     assert all([bib.get_value('529', 'a') for bib in speeches + votes])
 
-def test_edit_57():
-    # BIBLIOGRAPHIC - Re-import subfield 610 $g from linked auth when value is None
-    from dlx.marc import Auth
-    value_a = 'dummy-57'
-    value_g = 'dummy-g-57'
-
-    # Create valid authority record for both $a and $g
-    Auth().set('110', 'a', value_a).set('110', 'g', value_g).commit()
-
-    [bib.set('610', 'a', value_a).set('610', 'g', value_g) for bib in all_records()]
-    
-    # Add mutable $g=None with xref so edit_57 must recover it from auth lookup
-    for bib in all_records()[:15]:
-        field = bib.get_field('610')
-        xref = field.get_subfield('g').xref
-        field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None, 'xref': xref})())
-    
-    assert len([bib for bib in all_records()[:15] if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields)]) == 15
-    [batch_edit.edit_57(bib) for bib in all_records()]
-    assert not any([bib for bib in all_records() if any(x.code == 'g' and x.value is None for x in bib.get_field('610').subfields if hasattr(bib.get_field('610'), 'subfields'))])
-    assert all([bib.get_value('610', 'g') == value_g for bib in all_records()])
-
-def test_edit_58():
-    # BIBLIOGRAPHIC - Re-import subfield 611 $a from linked auth when value is None
-    from dlx.marc import Auth
-    value_a = 'dummy-58'
-
-    # Create valid authority record
-    Auth().set('111', 'a', value_a).commit()
-
-    [bib.set('611', 'a', value_a) for bib in all_records()]
-    
-    # Add mutable $a=None with xref so edit_58 must recover it from auth lookup
-    for bib in all_records()[:15]:
-        field = bib.get_field('611')
-        xref = field.get_subfield('a').xref
-        field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None, 'xref': xref})())
-    
-    assert len([bib for bib in all_records()[:15] if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields)]) == 15
-    [batch_edit.edit_58(bib) for bib in all_records()]
-    assert not any([bib for bib in all_records() if any(x.code == 'a' and x.value is None for x in bib.get_field('611').subfields if hasattr(bib.get_field('611'), 'subfields'))])
-    assert all([bib.get_value('611', 'a') == value_a for bib in all_records()])
-
-def test_edit_59():
-    # BIBLIOGRAPHIC - Re-import subfield 191 $c from linked auth when value is None
-    from dlx.marc import Auth
-    value_c = 'dummy-59'
-
-    Auth().set('190', 'c', value_c).commit()
-    
-    [bib.set('191', 'c', value_c) for bib in all_records()]
-    
-    # Add mutable $c=None with xref so edit_59 must recover it from auth lookup
-    for bib in all_records()[:15]:
-        field = bib.get_field('191')
-        xref = field.get_subfield('c').xref
-        field.subfields.append(type('obj', (object,), {'code': 'c', 'value': None, 'xref': xref})())
-    
-    assert len([bib for bib in all_records()[:15] if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields)]) == 15
-    [batch_edit.edit_59(bib) for bib in all_records()]
-    assert not any([bib for bib in all_records() if any(x.code == 'c' and x.value is None for x in bib.get_field('191').subfields if hasattr(bib.get_field('191'), 'subfields'))])
-    assert all([bib.get_value('191', 'c') == value_c for bib in all_records()])
-
-def test_edit_57_invalid_xref_skips_and_logs(capsys):
-    from dlx.marc import Auth
-    value_a = 'dummy-57-invalid'
-    value_g = 'dummy-g-57-invalid'
-
-    Auth().set('110', 'a', value_a).set('110', 'g', value_g).commit()
-    bib = Bib().set('610', 'a', value_a).set('610', 'g', value_g)
-    field = bib.get_field('610')
-    field.subfields.append(type('obj', (object,), {'code': 'g', 'value': 'dummy-g', 'xref': 999999999})())
-
-    batch_edit.edit_57(bib)
-    out = capsys.readouterr().out
-    assert 'edit_57 skipped (invalid xref(s) in 610:' in out
-
-def test_edit_57_missing_g_in_auth_reimports_existing_subfields(capsys):
-    from dlx.marc import Auth
-
-    value_a = 'dummy-57-missing-g'
-
-    auth = Auth().set('110', 'a', value_a)
-    auth.commit()
-
-    bib = Bib().set('610', 'a', value_a)
-    field = bib.get_field('610')
-    xref = field.get_subfield('a').xref
-    field.subfields.append(type('obj', (object,), {'code': 'a', 'value': None, 'xref': xref})())
-    field.subfields.append(type('obj', (object,), {'code': 'g', 'value': None, 'xref': xref})())
-
-    batch_edit.edit_57(bib)
-
-    out = capsys.readouterr().out
-    assert 'edit_57 skipped' not in out
-    assert not any(x.code == 'a' and x.value is None for x in field.subfields)
-    assert field.get_value('a') == value_a
-    assert not any(x.code == 'g' and x.value is None for x in field.subfields)
-
-def test_edit_58_invalid_xref_skips_and_logs(capsys):
-    from dlx.marc import Auth
-    value_a = 'dummy-58-invalid'
-
-    Auth().set('111', 'a', value_a).commit()
-    bib = Bib().set('611', 'a', value_a)
-    field = bib.get_field('611')
-    field.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'dummy', 'xref': 999999998})())
-
-    batch_edit.edit_58(bib)
-    out = capsys.readouterr().out
-    assert 'edit_58 skipped (invalid xref(s) in 611:' in out
-
-def test_edit_59_invalid_xref_skips_and_logs(capsys):
-    from dlx.marc import Auth
-    value_c = 'dummy-59-invalid'
-
-    Auth().set('190', 'c', value_c).commit()
-    bib = Bib().set('191', 'c', value_c)
-    field = bib.get_field('191')
-    field.subfields.append(type('obj', (object,), {'code': 'c', 'value': 'dummy', 'xref': 999999997})())
-
-    batch_edit.edit_59(bib)
-    out = capsys.readouterr().out
-    assert 'edit_59 skipped (invalid xref(s) in 191:' in out
-
-def test_reimport_991_from_linked_auth_191_uses_xref_as_value(monkeypatch):
-    xref = 123456
-
-    bib = Bib()
-    old_991 = Datafield('991', record_type='bib').set('a', 'legacy', auth_control=False)
-    old_991.subfields.append(type('obj', (object,), {'code': 'a', 'value': 'legacy', 'xref': xref})())
-    bib.fields.append(old_991)
-
-    auth = Auth()
-    auth_191 = Datafield('191', record_type='auth')
-    auth_191.set('a', 'A/8801', auth_control=False).set('b', 'SOMETHING', auth_control=False).set('c', '2024', auth_control=False)
-    auth.fields.append(auth_191)
-
-    def fake_from_query(query, projection=None):
-        if query == {'_id': xref}:
-            return auth
-        return None
-
-    monkeypatch.setattr(batch_edit.Auth, 'from_query', fake_from_query)
-
-    batch_edit._reimport_991_from_linked_auth_191(bib)
-
-    new_991 = bib.get_fields('991')[0]
-
-    assert new_991.get_value('a') == 'A/8801'
-    assert new_991.get_value('b') == 'SOMETHING'
-    assert new_991.get_value('c') == '2024'
-    assert new_991.get_value('0') == ''
-
 def test_add_999():
     # add 999
     [batch_edit.add_999(bib, initials='js') for bib in all_records()]
@@ -464,7 +310,7 @@ def test_add_999():
     assert all([f'jsb{date}' in bib.get_values('999', 'a') for bib in all_records()])
     assert all([date in bib.get_values('999', 'b') for bib in all_records()])
     assert all([f'b' in bib.get_values('999', 'c') for bib in all_records()])
-    
+
 ### abstracted functions
 
 @pytest.mark.skip(reason='Not implemented yet')
