@@ -1,0 +1,12 @@
+
+There are two types of data that we need to recover: 
+991 indicators of the main organs' documents - the number of affected records is ~7512.
+991 $e of the main organs' documents, usually only applied to selected meeting records is potentially ~ 282 records, but probably less since we do not assign the $e to all meeting records.
+
+We add the 991$e manually, if we get the back-up data.
+We believe that the first indicator could be added automatically based on the authority, or they can be inferred:
+If a 991 starts: 
+A/ -> 1    General Assembly
+E/ -> 2    Economic and Social Council
+S/ -> 3    Security Council
+T/ ->  4 Trusteeship Council

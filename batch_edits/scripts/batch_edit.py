@@ -73,18 +73,21 @@ def _commit_with_reimport_retry(bib, last_edit):
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument('--connect', required=True, help='DLX connection string')
+    parser.add_argument('--connect', help='DLX connection string')
     parser.add_argument('--database', help='The database name')
     parser.add_argument('--query', help='JSON MDB query document')
     parser.add_argument('--querystring', help='DLX query string')
     parser.add_argument('--limit', type=int, default=0, help='limit the number of records processed')
-    parser.add_argument('--output', required=True, choices=['db', 'mrk'], help='')
+    parser.add_argument('--output', choices=['db', 'mrk'], help='')
     parser.add_argument('--output_file', help='File to write output to if output is mrk')
     parser.add_argument('--skip_confirm', action='store_true', help='')
     parser.add_argument('--view_changes', action='store_true', help='')
     parser.add_argument('--initials', help='Initials to use for the 999 field (default: js)')
-
+    parser.add_argument('--list', action='store_true', help='List known batch edit functions and exit')
+    parser.add_argument('--only', help='Limit execution to a specific edit function')
+    
     return parser.parse_args()
+
 
 def run(**kwargs):
     if kwargs:
@@ -94,8 +97,37 @@ def run(**kwargs):
             sys.argv.append(f'--{param}' if isinstance(arg, bool) else f'--{param}={arg}')
 
     args = get_args()
+    
+    # List available edits and exit if --list is passed
+    all_edits_map = {name: f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_'}
+    if args.list:
+        print('Available batch edit functions:')
+        for name in sorted(all_edits_map.keys()):
+            func = all_edits_map[name]
+            doc = inspect.getdoc(func)
+            # If no docstring, try to get the first comment line from the source
+            if not doc:
+                try:
+                    source = inspect.getsourcelines(func)[0]
+                    # Find the first line that starts with # after the def line
+                    for line in source[1:]:
+                        stripped = line.strip()
+                        if stripped.startswith('#'):
+                            doc = stripped.lstrip('# ').strip()
+                            break
+                except Exception:
+                    doc = 'No description available'
+            
+            print(f'  - {name}: {doc or "No description available"}')
+        sys.exit(0)
 
+    # Validate required arguments for execution
+    if not args.connect or not args.output:
+        print("Error: --connect and --output are required for execution. Use --list to see available edits without these.")
+        sys.exit(1)
+    
     if DB.database_name == 'testing':
+
         # let the test module connect to the DB
         pass
     else:
@@ -112,7 +144,16 @@ def run(**kwargs):
 
     query = Query.from_string(args.querystring) if args.querystring else json.loads(args.query) if args.query else {}
     bibs = BibSet.from_query(query, limit=args.limit)
-    edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
+    
+    if args.only:
+        if args.only not in all_edits_map:
+            print(f"Error: function {args.only} not found. Use --list to see available edits.")
+            sys.exit(1)
+        print(f'Executing only the following: {args.only}')
+        edits = [all_edits_map[args.only]]
+    else:
+        edits = [f for name, f in inspect.getmembers(sys.modules[__name__], inspect.isfunction) if name[:5] == 'edit_']
+    
     i, status = 0, ''
 
     for bib in bibs:
@@ -184,6 +225,25 @@ def run(**kwargs):
             print(f'--> record id {bib.id}: No changes')
 
 ###
+
+# recover_indicators
+def edit_recover_991_indicators(bib):
+    # Mapping based on issue-991.txt
+    mapping = {
+        'A/': '1',
+        'E/': '2',
+        'S/': '3',
+        'T/': '4'
+    }
+    
+    for field in bib.get_fields('991'):
+        content = "".join([sub.value for sub in field.subfields if sub.value])
+        for prefix, indicator in mapping.items():
+            if content.startswith(prefix):
+                field.ind1 = indicator
+                field.ind2 = ' '
+                break
+    return bib
 
 # delete_field
 def edit_1(bib):
