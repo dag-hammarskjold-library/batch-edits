@@ -89,7 +89,7 @@ def get_args():
 def run(**kwargs):
     if kwargs:
         sys.argv = [sys.argv[0]]
-        
+
         for param, arg in kwargs.items():
             sys.argv.append(f'--{param}' if isinstance(arg, bool) else f'--{param}={arg}')
 
@@ -147,12 +147,12 @@ def run(**kwargs):
 
             if not isinstance(bib, Bib):
                 raise Exception('Edit function not returning a Bib object')
-        
+
         initials = args.initials if args.initials else 'js'
         if len(initials) > 2:
             initials = initials[:2]
         bib = add_999(bib, initials)
-            
+
         if changes := '\n'.join([f.to_mrk() for f in Diff(before_edits, bib).a]):
             if args.view_changes:
                 if args.output == 'mrk':
@@ -194,7 +194,7 @@ def edit_1(bib):
 
     return bib
 
-# delete_field   
+# delete_field
 def edit_2(bib):
     # 2. BIBLIOGRAPHIC - Delete field 029 - IF subfield a IS NOT JN or UN
     if not any([x == 'Speeches' or x == 'Voting Data' for x in bib.get_values('989', 'a')]):
@@ -209,9 +209,9 @@ def edit_3(bib):
         if not any([re.match(f'^{x}', field.get_value('a')) for x in ('UND', 'UNP', 'UNGREY', 'CIF', 'DIG', 'HUR', 'PER', 'PN')]):
             bib.fields = [f for f in bib.fields if f != field] # todo: fix dlx.Marc.delete_field with field as arg # 2025-11-4 this may be done?
 
-    return bib  
+    return bib
 
-# delete_field        
+# delete_field
 def edit_4(bib):
     # 4. BIBLIOGRAPHIC, SPEECHES, VOTING - Delete field 000 - No condition
     bib.delete_fields('000')
@@ -221,7 +221,7 @@ def edit_4(bib):
 def edit_5(bib):
     # 5. BIBLIOGRAPHIC - Delete field 008 - No condition
     # update: delete for all record types
-    
+
     bib.delete_fields('008')
 
     return bib
@@ -283,7 +283,7 @@ def edit_15(bib):
 
             if val not in bib.get_values('022', 'a'):
                 bib.set('022', 'a', val, address='+')
-            
+
             field.subfields = [s for s in field.subfields if s.code != 'x']
 
     return bib
@@ -382,7 +382,7 @@ def edit_23_34_36_42(bib):
     # 43.3 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 362 - No conditions
     # 43.4 BIBLIOGRAPHIC, VOTING, SPEECHES - Delete indicators 490 - No conditions
     tags = ('022', '041', '239', '245', '246', '362', '490', '505', '520', '597', '600', '610', '611', '630', '700', '710', '711', '730', '740', '767', '780', '785', '830')
-    
+
     for tag in tags:
         for field in bib.get_fields(tag):
             field.ind1 = ' ' if field.ind1 not in (' ', '_') else field.ind1
@@ -456,7 +456,7 @@ def edit_54(bib):
     if not any([x == 'Voting Data' for x in bib.get_values('989', 'a')]):
         for field in bib.get_fields('710'):
             field.subfields = [x for x in field.subfields if x.code != '9']
-    
+
     return bib
 
 def edit_55(bib):
